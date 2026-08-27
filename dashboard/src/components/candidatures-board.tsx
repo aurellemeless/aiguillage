@@ -5,21 +5,18 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ApplicationWithHistory } from '@/lib/db';
 import { STATUSES } from '@/lib/types';
 import { isFollowupDue } from '@/lib/followup';
-import { daysSince, formatDateFr } from '@/lib/status';
+import { daysSince, formatDate } from '@/lib/status';
+import { dayPrefix, statusLabel } from '@/lib/i18n';
+import { useLocale } from '@/lib/locale-context';
 import StatusStamp from '@/components/status-stamp';
 import ApplicationDrawer from '@/components/application-drawer';
 
 const CLOSED_STATUSES = new Set(['Refusé', 'Sans réponse/Abandonné', 'Offre reçue']);
 
-function ageLabel(app: ApplicationWithHistory): string {
-	if (app.status === 'Brouillon') return '—';
-	if (CLOSED_STATUSES.has(app.status)) return formatDateFr(app.application_date);
-	return `J+${daysSince(app.application_date)}`;
-}
-
 export default function CandidaturesBoard({ applications }: { applications: ApplicationWithHistory[] }) {
 	const router = useRouter();
 	const searchParams = useSearchParams();
+	const { locale, t } = useLocale();
 	const [mode, setMode] = useState<'kanban' | 'table'>('kanban');
 	const [openId, setOpenId] = useState<number | null>(null);
 	const [items, setItems] = useState(applications);
@@ -34,6 +31,12 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 		const openParam = searchParams.get('open');
 		if (openParam) setOpenId(Number(openParam));
 	}, [searchParams]);
+
+	function ageLabel(app: ApplicationWithHistory): string {
+		if (app.status === 'Brouillon') return '—';
+		if (CLOSED_STATUSES.has(app.status)) return formatDate(app.application_date, locale);
+		return `${dayPrefix(locale)}+${daysSince(app.application_date)}`;
+	}
 
 	const selected = useMemo(() => items.find((a) => a.id === openId) ?? null, [items, openId]);
 
@@ -67,13 +70,13 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 			<div className='toolbar'>
 				<div className='view-toggle'>
 					<button className={mode === 'kanban' ? 'active' : ''} onClick={() => setMode('kanban')}>
-						Kanban
+						{t.candidatures.kanban}
 					</button>
 					<button className={mode === 'table' ? 'active' : ''} onClick={() => setMode('table')}>
-						Liste
+						{t.candidatures.list}
 					</button>
 				</div>
-				<span className='note'>{items.length} candidatures</span>
+				<span className='note'>{t.candidatures.count(items.length)}</span>
 			</div>
 
 			{mode === 'kanban' && (
@@ -90,7 +93,7 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 							onDrop={(e) => handleDrop(e, col.status)}
 						>
 							<div className='col-head'>
-								<h3>{col.status}</h3>
+								<h3>{statusLabel(col.status, locale)}</h3>
 								<span className='col-count font-mono'>{col.items.length}</span>
 							</div>
 							{col.items.map((app) => (
@@ -127,11 +130,11 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 					<table>
 						<thead>
 							<tr>
-								<th>Entreprise</th>
-								<th>Poste</th>
-								<th>Candidaté le</th>
-								<th>Statut</th>
-								<th>Relance</th>
+								<th>{t.candidatures.colCompany}</th>
+								<th>{t.candidatures.colRole}</th>
+								<th>{t.candidatures.colAppliedOn}</th>
+								<th>{t.candidatures.colStatus}</th>
+								<th>{t.candidatures.colFollowUp}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -141,13 +144,15 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 										<b>{app.company}</b>
 									</td>
 									<td>{app.role}</td>
-									<td className='date'>{formatDateFr(app.application_date)}</td>
+									<td className='date'>{formatDate(app.application_date, locale)}</td>
 									<td>
 										<StatusStamp status={app.status} />
 									</td>
 									<td>
 										{isFollowupDue(app.status, app.application_date, app.followup_delay_days) ? (
-											<span className='stamp relance'>J+{daysSince(app.application_date)}</span>
+											<span className='stamp relance'>
+												{dayPrefix(locale)}+{daysSince(app.application_date)}
+											</span>
 										) : (
 											'—'
 										)}

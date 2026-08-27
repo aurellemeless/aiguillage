@@ -1,6 +1,8 @@
 'use client';
 
 import { CoverLetterContent, CvContent, ExperienceBlock, ProposedContent, SkillLine } from '@/lib/types';
+import { useLocale } from '@/lib/locale-context';
+import { Dict } from '@/lib/i18n';
 
 interface ReviewFormProps {
 	content: ProposedContent;
@@ -13,10 +15,12 @@ function ExperienceEditor({
 	title,
 	items,
 	onChange,
+	t,
 }: {
 	title: string;
 	items: ExperienceBlock[];
 	onChange: (items: ExperienceBlock[]) => void;
+	t: Dict;
 }) {
 	function updateItem(index: number, patch: Partial<ExperienceBlock>) {
 		const next = items.map((item, i) => (i === index ? { ...item, ...patch } : item));
@@ -30,20 +34,20 @@ function ExperienceEditor({
 				<div key={index} style={{ border: '1px solid var(--rule)', borderRadius: 6, padding: 14, marginBottom: 12 }}>
 					<div style={{ display: 'flex', gap: 12 }}>
 						<div className='field' style={{ flex: 1 }}>
-							<label>Entreprise</label>
+							<label>{t.reviewForm.company}</label>
 							<input value={item.company} onChange={(e) => updateItem(index, { company: e.target.value })} />
 						</div>
 						<div className='field' style={{ flex: 1 }}>
-							<label>Dates</label>
+							<label>{t.reviewForm.dates}</label>
 							<input value={item.dates} onChange={(e) => updateItem(index, { dates: e.target.value })} />
 						</div>
 					</div>
 					<div className='field'>
-						<label>Poste</label>
+						<label>{t.reviewForm.role}</label>
 						<input value={item.role} onChange={(e) => updateItem(index, { role: e.target.value })} />
 					</div>
 					<div className='field'>
-						<label>Bullets (une par ligne)</label>
+						<label>{t.reviewForm.bullets}</label>
 						<textarea
 							rows={4}
 							value={item.bullets.join('\n')}
@@ -51,14 +55,14 @@ function ExperienceEditor({
 						/>
 					</div>
 					<div className='field' style={{ marginBottom: 0 }}>
-						<label>Tech (séparée par des virgules)</label>
+						<label>{t.reviewForm.tech}</label>
 						<input
 							value={item.tech.join(', ')}
 							onChange={(e) =>
 								updateItem(index, {
 									tech: e.target.value
 										.split(',')
-										.map((t) => t.trim())
+										.map((v) => v.trim())
 										.filter(Boolean),
 								})
 							}
@@ -70,14 +74,14 @@ function ExperienceEditor({
 	);
 }
 
-function SkillsEditor({ skills, onChange }: { skills: SkillLine[]; onChange: (skills: SkillLine[]) => void }) {
+function SkillsEditor({ skills, onChange, t }: { skills: SkillLine[]; onChange: (skills: SkillLine[]) => void; t: Dict }) {
 	function updateSkill(index: number, patch: Partial<SkillLine>) {
 		onChange(skills.map((s, i) => (i === index ? { ...s, ...patch } : s)));
 	}
 
 	return (
 		<div style={{ marginBottom: 22 }}>
-			<h3 style={{ fontSize: 14, marginBottom: 12 }}>Compétences</h3>
+			<h3 style={{ fontSize: 14, marginBottom: 12 }}>{t.reviewForm.skills}</h3>
 			{skills.map((skill, index) => (
 				<div key={index} style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
 					<input
@@ -117,29 +121,35 @@ function SkillsEditor({ skills, onChange }: { skills: SkillLine[]; onChange: (sk
 	);
 }
 
-function CvEditor({ cv, onChange }: { cv: CvContent; onChange: (cv: CvContent) => void }) {
+function CvEditor({ cv, onChange, t }: { cv: CvContent; onChange: (cv: CvContent) => void; t: Dict }) {
 	return (
 		<div>
-			<h2 style={{ fontSize: 16, marginBottom: 16 }}>CV</h2>
+			<h2 style={{ fontSize: 16, marginBottom: 16 }}>{t.reviewForm.cvHeading}</h2>
 			<div className='field'>
-				<label>Headline</label>
+				<label>{t.reviewForm.headline}</label>
 				<input value={cv.headline} onChange={(e) => onChange({ ...cv, headline: e.target.value })} />
 			</div>
 			<div className='field'>
-				<label>Tagline</label>
+				<label>{t.reviewForm.tagline}</label>
 				<input value={cv.tagline ?? ''} onChange={(e) => onChange({ ...cv, tagline: e.target.value })} />
 			</div>
 			<div className='field'>
-				<label>Résumé (optionnel)</label>
+				<label>{t.reviewForm.summary}</label>
 				<textarea rows={2} value={cv.summary ?? ''} onChange={(e) => onChange({ ...cv, summary: e.target.value })} />
 			</div>
-			<SkillsEditor skills={cv.skills} onChange={(skills) => onChange({ ...cv, skills })} />
-			<ExperienceEditor title='Expériences' items={cv.experience} onChange={(experience) => onChange({ ...cv, experience })} />
+			<SkillsEditor skills={cv.skills} onChange={(skills) => onChange({ ...cv, skills })} t={t} />
+			<ExperienceEditor
+				title={t.reviewForm.experience}
+				items={cv.experience}
+				onChange={(experience) => onChange({ ...cv, experience })}
+				t={t}
+			/>
 			{cv.personal_projects && cv.personal_projects.length > 0 && (
 				<ExperienceEditor
-					title='Projets personnels'
+					title={t.reviewForm.personalProjects}
 					items={cv.personal_projects}
 					onChange={(personal_projects) => onChange({ ...cv, personal_projects })}
+					t={t}
 				/>
 			)}
 		</div>
@@ -149,23 +159,25 @@ function CvEditor({ cv, onChange }: { cv: CvContent; onChange: (cv: CvContent) =
 function CoverLetterEditor({
 	coverLetter,
 	onChange,
+	t,
 }: {
 	coverLetter: CoverLetterContent;
 	onChange: (coverLetter: CoverLetterContent) => void;
+	t: Dict;
 }) {
 	return (
 		<div>
-			<h2 style={{ fontSize: 16, marginBottom: 16 }}>Lettre de motivation</h2>
+			<h2 style={{ fontSize: 16, marginBottom: 16 }}>{t.reviewForm.letterHeading}</h2>
 			<div className='field'>
-				<label>Destinataire</label>
+				<label>{t.reviewForm.recipient}</label>
 				<input value={coverLetter.recipient ?? ''} onChange={(e) => onChange({ ...coverLetter, recipient: e.target.value })} />
 			</div>
 			<div className='field'>
-				<label>Objet</label>
+				<label>{t.reviewForm.subject}</label>
 				<input value={coverLetter.subject ?? ''} onChange={(e) => onChange({ ...coverLetter, subject: e.target.value })} />
 			</div>
 			<div className='field'>
-				<label>Corps (paragraphes séparés par une ligne vide)</label>
+				<label>{t.reviewForm.body}</label>
 				<textarea
 					rows={10}
 					value={coverLetter.body.join('\n\n')}
@@ -187,29 +199,30 @@ export default function ReviewForm({
 	generateCoverLetter,
 	onToggleGenerateCoverLetter,
 }: ReviewFormProps) {
+	const { t } = useLocale();
 	return (
 		<div>
 			<div style={{ display: 'flex', gap: 16 }}>
 				<div className='field' style={{ flex: 1 }}>
-					<label>Entreprise</label>
+					<label>{t.reviewForm.company}</label>
 					<input value={content.company} onChange={(e) => onChange({ ...content, company: e.target.value })} />
 				</div>
 				<div className='field' style={{ flex: 1 }}>
-					<label>Poste</label>
+					<label>{t.reviewForm.role}</label>
 					<input value={content.role} onChange={(e) => onChange({ ...content, role: e.target.value })} />
 				</div>
 			</div>
-			<CvEditor cv={content.cv} onChange={(cv) => onChange({ ...content, cv })} />
+			<CvEditor cv={content.cv} onChange={(cv) => onChange({ ...content, cv })} t={t} />
 			<label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, margin: '18px 0' }}>
 				<input
 					type='checkbox'
 					checked={generateCoverLetter}
 					onChange={(e) => onToggleGenerateCoverLetter(e.target.checked)}
 				/>
-				Générer aussi la lettre de motivation
+				{t.reviewForm.generateLetter}
 			</label>
 			{generateCoverLetter && (
-				<CoverLetterEditor coverLetter={content.cover_letter} onChange={(cover_letter) => onChange({ ...content, cover_letter })} />
+				<CoverLetterEditor coverLetter={content.cover_letter} onChange={(cover_letter) => onChange({ ...content, cover_letter })} t={t} />
 			)}
 		</div>
 	);

@@ -3,15 +3,18 @@
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ColorModeButton } from '@/components/ui/color-mode';
-
-const NAV_ITEMS = [
-	{ href: '/', label: 'Tableau de bord', icon: '▣' },
-	{ href: '/applications', label: 'Candidatures', icon: '▤' },
-	{ href: '/nouvelle', label: 'Nouvelle candidature', icon: '✎' },
-];
+import { useLocale } from '@/lib/locale-context';
+import { Locale } from '@/lib/i18n';
 
 export default function Sidebar() {
 	const pathname = usePathname();
+	const { locale, t, setLocale } = useLocale();
+
+	const navItems = [
+		{ href: '/', label: t.nav.dashboard, icon: '▣' },
+		{ href: '/applications', label: t.nav.applications, icon: '▤' },
+		{ href: '/nouvelle', label: t.nav.newApplication, icon: '✎' },
+	];
 
 	return (
 		<aside
@@ -37,7 +40,7 @@ export default function Sidebar() {
 						textTransform: 'uppercase',
 					}}
 				>
-					Suivi de candidatures
+					{t.nav.tagline}
 				</div>
 				<div className='font-display' style={{ fontSize: 19, fontWeight: 600 }}>
 					Aiguill<span style={{ color: 'var(--accent)' }}>age</span>
@@ -45,7 +48,7 @@ export default function Sidebar() {
 			</div>
 
 			<nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-				{NAV_ITEMS.map((item) => {
+				{navItems.map((item) => {
 					const active = pathname === item.href;
 					return (
 						<NextLink
@@ -73,9 +76,18 @@ export default function Sidebar() {
 				})}
 			</nav>
 
-			<div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
-				<span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>Registre local</span>
-				<ColorModeButton />
+			<div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
+				<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+					<span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>{t.nav.localRegistry}</span>
+					<ColorModeButton />
+				</div>
+				<div className='view-toggle' style={{ alignSelf: 'flex-start' }}>
+					{(['fr', 'en'] as Locale[]).map((l) => (
+						<button key={l} className={locale === l ? 'active' : ''} onClick={() => setLocale(l)}>
+							{l.toUpperCase()}
+						</button>
+					))}
+				</div>
 			</div>
 		</aside>
 	);

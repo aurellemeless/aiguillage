@@ -1,4 +1,5 @@
 import { Status } from './types';
+import { Locale } from './i18n';
 
 const STAMP_CLASS: Record<Status, string> = {
 	Brouillon: 'brouillon',
@@ -23,17 +24,21 @@ export function daysSince(dateStr: string | null): number | null {
 	return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
 }
 
-export function formatDateFr(dateStr: string | null): string {
+function intlLocale(locale: Locale): string {
+	return locale === 'en' ? 'en-US' : 'fr-FR';
+}
+
+export function formatDate(dateStr: string | null, locale: Locale = 'fr'): string {
 	if (!dateStr) return '—';
 	const d = new Date(dateStr);
 	if (Number.isNaN(d.getTime())) return dateStr;
-	return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+	return d.toLocaleDateString(intlLocale(locale), { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-export function formatDateTimeFr(dateStr: string): string {
+export function formatDateTime(dateStr: string, locale: Locale = 'fr'): string {
 	const d = new Date(dateStr);
 	if (Number.isNaN(d.getTime())) return dateStr;
-	return d.toLocaleString('fr-FR', {
+	return d.toLocaleString(intlLocale(locale), {
 		day: '2-digit',
 		month: '2-digit',
 		year: 'numeric',

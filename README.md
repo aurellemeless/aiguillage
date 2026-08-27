@@ -1,55 +1,58 @@
 # Aiguillage
 
-[![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Outil personnel de suivi de candidatures : tu colles une offre d'emploi, l'app
-génère un CV et une lettre de motivation adaptés (via Claude Code), tu relis
-et valides, puis chaque candidature avance sur son propre rail — statuts,
-relances, historique — jusqu'à sa destination.
+A personal job-application tracker: paste a job posting, the app generates a
+tailored CV and cover letter (via Claude Code), you review and approve them,
+and each application then moves along its own track — status, follow-ups,
+history — toward its destination.
 
-Ce projet est pensé pour un usage **local et mono-utilisateur** — il n'y a
-pas d'authentification ni de multi-compte. Il est publié en open source pour
-que d'autres puissent le réutiliser, l'adapter ou s'en inspirer, en y mettant
-leur propre profil.
+> **Note:** the interface language (French/English) is switchable from the
+> sidebar and also controls the language of the generated CV and cover
+> letter.
 
-## Fonctionnalités
+This project is built for **local, single-user** use — there's no
+authentication or multi-account support. It's open source so others can
+reuse it, adapt it, or take inspiration from it with their own profile.
 
-- Analyse d'une offre collée en texte brut par Claude Code (headless), à
-  partir de ton profil (`profile/profile.json`), pour proposer un CV et une
-  lettre adaptés.
-- Relecture et édition du contenu proposé avant génération, avec aperçu du
-  CV en direct.
-- Génération des documents `.docx` (service Python dédié).
-- Tableau de bord : candidatures actives, en attente de réponse, entretiens
-  en cours, taux de réponse, relances à faire, activité récente.
-- Vue Kanban (glisser-déposer une candidature d'une colonne à l'autre pour
-  changer son statut) et vue liste.
-- Fiche détaillée par candidature : statut, documents générés, historique
-  des changements de statut, notes libres.
-- Suivi en CLI (`tracker/tracker_cli.py`) en complément du dashboard.
+## Features
 
-## Prérequis
+- Analyzes a plain-text job posting with Claude Code (headless), based on
+  your profile (`profile/profile.json`), to propose a tailored CV and cover
+  letter.
+- Review and edit the proposed content before generating documents, with a
+  live CV preview.
+- Generates `.docx` documents (dedicated Python service).
+- Dashboard: active applications, awaiting response, ongoing interviews,
+  response rate, follow-ups due, recent activity.
+- Kanban view (drag a card to another column to change its status) and list
+  view.
+- Detail panel per application: status, generated documents, status-change
+  history, free-form notes.
+- CLI tracking (`tracker/tracker_cli.py`) alongside the dashboard.
+- French/English interface switch, also used as the generation language for
+  the CV and cover letter.
 
-- [Claude Code](https://claude.com/claude-code) installé et authentifié en
-  ligne de commande (`claude`) — utilisé en mode headless pour analyser les
-  offres.
-- Node.js 20+ et npm.
+## Requirements
+
+- [Claude Code](https://claude.com/claude-code) installed and authenticated
+  on the command line (`claude`) — used headless to analyze job postings.
+- Node.js 20+ and npm.
 - Python 3.10+.
 
-## Installation
+## Setup
 
-1. **Cloner le dépôt puis créer ton profil** à partir du modèle fourni :
+1. **Clone the repo, then create your profile** from the provided template:
 
    ```bash
    cp profile/profile-default.json profile/profile.json
    ```
 
-   Remplis `profile/profile.json` avec tes propres informations (identité,
-   compétences, expériences, formations...). Ce fichier contient des données
-   personnelles : il est ignoré par git (`.gitignore`) et ne doit jamais être
-   commité.
+   Fill in `profile/profile.json` with your own information (identity,
+   skills, experience, education...). This file holds personal data: it's
+   git-ignored and should never be committed.
 
-2. **Service de génération de CV** (`services/cv-generator`) :
+2. **CV generation service** (`services/cv-generator`):
 
    ```bash
    cd services/cv-generator
@@ -58,47 +61,47 @@ leur propre profil.
    pip install -r requirements.txt
    ```
 
-3. **Dashboard** (`dashboard/`) :
+3. **Dashboard** (`dashboard/`):
 
    ```bash
    cd dashboard
    npm install
    ```
 
-4. **Base de suivi** (`tracker/`) :
+4. **Tracking database** (`tracker/`):
 
    ```bash
    cd tracker
-   python3 db.py init   # crée data/applications.db à partir de schema.sql
+   python3 db.py init   # creates data/applications.db from schema.sql
    ```
 
-## Démarrage
+## Running
 
 ```bash
 ./start.sh
 ```
 
-Démarre le service de génération de CV (port 8000) puis le dashboard
+Starts the CV generation service (port 8000) then the dashboard
 (`http://localhost:3000`).
 
-## Suivi des candidatures en CLI
+## Tracking applications from the CLI
 
 ```bash
 cd tracker
-python3 tracker_cli.py add --company "Acme" --role "Dev Full Stack" --status Brouillon
+python3 tracker_cli.py add --company "Acme" --role "Full Stack Dev" --status Brouillon
 python3 tracker_cli.py list
 ```
 
-## Structure du projet
+## Project structure
 
 ```
-dashboard/               Next.js — tableau de bord, Kanban, wizard de création
-services/cv-generator/   FastAPI + python-docx — génération des .docx
-tracker/                 CLI Python + schéma SQLite pour le suivi
-profile/                 Ton profil (profile.json, ignoré par git)
-data/                    Base SQLite + documents générés (ignorés par git)
+dashboard/               Next.js — dashboard, Kanban, application wizard
+services/cv-generator/   FastAPI + python-docx — .docx generation
+tracker/                 Python CLI + SQLite schema for tracking
+profile/                 Your profile (profile.json, git-ignored)
+data/                    SQLite database + generated documents (git-ignored)
 ```
 
-## Licence
+## License
 
-Ce projet est distribué sous licence [MIT](LICENSE).
+This project is distributed under the [MIT](LICENSE) license.

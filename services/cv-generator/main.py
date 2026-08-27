@@ -34,6 +34,7 @@ class Experience(BaseModel):
 class GenerateCVRequest(BaseModel):
     output_name: str
     subdir: Optional[str] = None
+    language: str = "fr"
     headline: str
     tagline: Optional[str] = None
     summary: Optional[str] = None
@@ -45,6 +46,7 @@ class GenerateCVRequest(BaseModel):
 class GenerateCoverLetterRequest(BaseModel):
     output_name: str
     subdir: Optional[str] = None
+    language: str = "fr"
     recipient: Optional[str] = None
     subject: Optional[str] = None
     body: list[str]
@@ -58,8 +60,8 @@ def health():
 @app.post("/generate-cv")
 def generate_cv(payload: GenerateCVRequest):
     profile = load_profile()
-    content = payload.model_dump(exclude={"output_name", "subdir"})
-    doc = generator.build_cv(profile, content)
+    content = payload.model_dump(exclude={"output_name", "subdir", "language"})
+    doc = generator.build_cv(profile, content, payload.language)
     path = generator.save_document(doc, payload.output_name, payload.subdir or "")
     return {"path": str(path)}
 
@@ -67,7 +69,7 @@ def generate_cv(payload: GenerateCVRequest):
 @app.post("/generate-cover-letter")
 def generate_cover_letter(payload: GenerateCoverLetterRequest):
     profile = load_profile()
-    content = payload.model_dump(exclude={"output_name", "subdir"})
-    doc = generator.build_cover_letter(profile, content)
+    content = payload.model_dump(exclude={"output_name", "subdir", "language"})
+    doc = generator.build_cover_letter(profile, content, payload.language)
     path = generator.save_document(doc, payload.output_name, payload.subdir or "")
     return {"path": str(path)}

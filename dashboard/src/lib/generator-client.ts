@@ -1,4 +1,5 @@
 import { CoverLetterContent, CvContent } from './types';
+import { Locale } from './i18n';
 
 const GENERATOR_BASE_URL = process.env.CV_GENERATOR_URL ?? 'http://localhost:8000';
 
@@ -18,15 +19,17 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 export function generateCv(
 	content: CvContent,
 	outputName: string,
-	subdir: string
+	subdir: string,
+	language: Locale = 'fr'
 ): Promise<{ path: string }> {
-	return postJson('/generate-cv', { ...content, output_name: outputName, subdir });
+	return postJson('/generate-cv', { ...content, output_name: outputName, subdir, language });
 }
 
 export function generateCoverLetter(
 	content: CoverLetterContent,
 	outputName: string,
-	subdir: string
+	subdir: string,
+	language: Locale = 'fr'
 ): Promise<{ path: string }> {
-	return postJson('/generate-cover-letter', { ...content, output_name: outputName, subdir });
+	return postJson('/generate-cover-letter', { ...content, output_name: outputName, subdir, language });
 }

@@ -1,14 +1,18 @@
 import NextLink from 'next/link';
 import { listApplicationsWithHistory } from '@/lib/db';
 import { isFollowupDue } from '@/lib/followup';
-import { daysSince, formatDateFr, formatDateTimeFr } from '@/lib/status';
+import { daysSince, formatDate, formatDateTime } from '@/lib/status';
+import { dayPrefix, getDict, statusLabel } from '@/lib/i18n';
+import { getServerLocale } from '@/lib/server-locale';
 
 export const dynamic = 'force-dynamic';
 
 const ACTIVE_STATUSES_EXCLUDED = new Set(['Refusé', 'Sans réponse/Abandonné']);
 const INTERVIEW_STATUSES = new Set(['Entretien RH', 'Entretien technique']);
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+	const locale = await getServerLocale();
+	const t = getDict(locale);
 	const applications = listApplicationsWithHistory();
 
 	const total = applications.length;
@@ -32,56 +36,56 @@ export default function DashboardPage() {
 	return (
 		<div>
 			<div className='topbar'>
-				<h1>Tableau de bord</h1>
-				<div className='search'>⌕ Rechercher une entreprise, un poste…</div>
+				<h1>{t.dashboard.title}</h1>
+				<div className='search'>⌕ {t.common.search}</div>
 				<NextLink href='/nouvelle' className='btn'>
-					+ Nouvelle candidature
+					{t.common.newApplicationBtn}
 				</NextLink>
 			</div>
 
 			<div className='content'>
 				<div className='kpi-row'>
 					<div className='kpi'>
-						<div className='label'>Candidatures actives</div>
+						<div className='label'>{t.dashboard.kpiActive}</div>
 						<div className='value font-mono'>{active}</div>
-						<div className='sub'>sur {total} au total</div>
+						<div className='sub'>{t.dashboard.kpiActiveSub(total)}</div>
 					</div>
 					<div className='kpi'>
-						<div className='label'>En attente de réponse</div>
+						<div className='label'>{t.dashboard.kpiWaiting}</div>
 						<div className='value font-mono'>{waiting}</div>
-						<div className='sub'>depuis l&apos;envoi</div>
+						<div className='sub'>{t.dashboard.kpiWaitingSub}</div>
 					</div>
 					<div className='kpi'>
-						<div className='label'>Entretiens en cours</div>
+						<div className='label'>{t.dashboard.kpiInterviews}</div>
 						<div className='value font-mono'>{interviews}</div>
-						<div className='sub'>RH + technique</div>
+						<div className='sub'>{t.dashboard.kpiInterviewsSub}</div>
 					</div>
 					<div className='kpi'>
-						<div className='label'>Taux de réponse</div>
+						<div className='label'>{t.dashboard.kpiResponseRate}</div>
 						<div className='value font-mono'>{responseRate}%</div>
-						<div className='sub'>parmi les candidatures envoyées</div>
+						<div className='sub'>{t.dashboard.kpiResponseRateSub}</div>
 					</div>
 				</div>
 
 				<div className='grid-2'>
 					<div className='panel'>
 						<div className='panel-head'>
-							<h2>À relancer</h2>
-							{toFollowUp.length > 0 && <span className='stamp relance'>{toFollowUp.length} en attente</span>}
+							<h2>{t.dashboard.followUp}</h2>
+							{toFollowUp.length > 0 && <span className='stamp relance'>{t.dashboard.followUpBadge(toFollowUp.length)}</span>}
 						</div>
 						<div className='panel-body'>
-							{toFollowUp.length === 0 && <div className='panel-empty'>Rien à relancer pour le moment.</div>}
+							{toFollowUp.length === 0 && <div className='panel-empty'>{t.dashboard.followUpEmpty}</div>}
 							{toFollowUp.map((app) => (
 								<div className='relance-item' key={app.id}>
 									<div className='who'>
 										<b>{app.company}</b>
-										<span>
-											{app.role} · envoyé le {formatDateFr(app.application_date)}
-										</span>
+										<span>{t.dashboard.followUpItem(app.role, formatDate(app.application_date, locale))}</span>
 									</div>
-									<div className='days font-mono'>J+{daysSince(app.application_date)}</div>
+									<div className='days font-mono'>
+										{dayPrefix(locale)}+{daysSince(app.application_date)}
+									</div>
 									<NextLink href={`/applications?open=${app.id}`} className='btn subtle'>
-										Ouvrir
+										{t.dashboard.open}
 									</NextLink>
 								</div>
 							))}
@@ -90,17 +94,17 @@ export default function DashboardPage() {
 
 					<div className='panel'>
 						<div className='panel-head'>
-							<h2>Activité récente</h2>
+							<h2>{t.dashboard.recentActivity}</h2>
 						</div>
 						<div className='timeline'>
-							{recentActivity.length === 0 && <div className='panel-empty'>Aucune activité pour le moment.</div>}
+							{recentActivity.length === 0 && <div className='panel-empty'>{t.dashboard.recentActivityEmpty}</div>}
 							{recentActivity.map((entry) => (
 								<div className='tl-item' key={entry.id}>
 									<div className='tl-dot' />
 									<div>
-										<div className='tl-date font-mono'>{formatDateTimeFr(entry.changed_at)}</div>
-										<div className='tl-text'>
-											<b>{entry.company}</b> — statut → {entry.status}
+										<div className='tl-date font-mono'>{formatDateTime(entry.changed_at, locale)}</div>
+											<div className='tl-text'>
+											<b>{entry.company}</b> — {t.dashboard.statusArrow} {statusLabel(entry.status, locale)}
 										</div>
 									</div>
 								</div>

@@ -1,8 +1,8 @@
 # Aiguillage — dashboard
 
-Interface Next.js d'Aiguillage (tableau de bord, Kanban, wizard de création).
-Voir le [README du projet](../README.md) pour l'installation et le
-démarrage complets.
+Aiguillage's Next.js interface (dashboard, Kanban board, application
+creation wizard). See the [project README](../README.md) for full setup
+and running instructions.
 
 ```bash
 npm install

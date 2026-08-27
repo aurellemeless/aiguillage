@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { IBM_Plex_Sans, IBM_Plex_Serif, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { Provider } from '@/components/ui/provider';
+import { LocaleProvider } from '@/lib/locale-context';
+import { getServerLocale } from '@/lib/server-locale';
 import Sidebar from '@/components/sidebar';
 
 const plexSans = IBM_Plex_Sans({
@@ -20,25 +22,38 @@ const plexMono = IBM_Plex_Mono({
 	variable: '--font-mono',
 });
 
-export const metadata: Metadata = {
-	title: 'Aiguillage',
-	description:
-		'Aiguillage — génère un CV et une lettre adaptés à une offre, et suit chaque candidature jusqu’à sa destination.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+	const locale = await getServerLocale();
+	return {
+		title: 'Aiguillage',
+		description:
+			locale === 'en'
+				? 'Aiguillage — generates a CV and cover letter tailored to a job posting, and tracks each application to its destination.'
+				: 'Aiguillage — génère un CV et une lettre adaptés à une offre, et suit chaque candidature jusqu’à sa destination.',
+	};
+}
 
-export default function RootLayout({
+export default async function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	const locale = await getServerLocale();
+
 	return (
-		<html lang='fr' className={`${plexSans.variable} ${plexSerif.variable} ${plexMono.variable}`} suppressHydrationWarning>
+		<html
+			lang={locale}
+			className={`${plexSans.variable} ${plexSerif.variable} ${plexMono.variable}`}
+			suppressHydrationWarning
+		>
 			<body>
 				<Provider>
-					<div style={{ display: 'flex', minHeight: '100vh' }}>
-						<Sidebar />
-						<div style={{ flex: 1, minWidth: 0 }}>{children}</div>
-					</div>
+					<LocaleProvider initialLocale={locale}>
+						<div style={{ display: 'flex', minHeight: '100vh' }}>
+							<Sidebar />
+							<div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+						</div>
+					</LocaleProvider>
 				</Provider>
 			</body>
 		</html>

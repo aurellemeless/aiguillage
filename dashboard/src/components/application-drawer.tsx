@@ -4,7 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ApplicationWithHistory } from '@/lib/db';
 import { STATUSES } from '@/lib/types';
-import { formatDateFr, formatDateTimeFr } from '@/lib/status';
+import { formatDate, formatDateTime } from '@/lib/status';
+import { statusLabel } from '@/lib/i18n';
+import { useLocale } from '@/lib/locale-context';
 import StatusStamp from '@/components/status-stamp';
 
 type Tab = 'resume' | 'docs' | 'hist' | 'notes';
@@ -21,6 +23,7 @@ export default function ApplicationDrawer({
 	onClose: () => void;
 }) {
 	const router = useRouter();
+	const { locale, t } = useLocale();
 	const [tab, setTab] = useState<Tab>('resume');
 	const [pendingStatus, setPendingStatus] = useState(false);
 	const [notes, setNotes] = useState(application?.notes ?? '');
@@ -69,22 +72,22 @@ export default function ApplicationDrawer({
 									<h2>{application.company}</h2>
 									<div className='role'>{application.role}</div>
 								</div>
-								<button className='drawer-close' onClick={onClose} aria-label='Fermer'>
+								<button className='drawer-close' onClick={onClose} aria-label={t.drawer.close}>
 									✕
 								</button>
 							</div>
 							<div className='tabs'>
 								<button className={`tab ${tab === 'resume' ? 'active' : ''}`} onClick={() => setTab('resume')}>
-									Résumé
+									{t.drawer.tabResume}
 								</button>
 								<button className={`tab ${tab === 'docs' ? 'active' : ''}`} onClick={() => setTab('docs')}>
-									CV &amp; Lettre
+									{t.drawer.tabDocs}
 								</button>
 								<button className={`tab ${tab === 'hist' ? 'active' : ''}`} onClick={() => setTab('hist')}>
-									Historique
+									{t.drawer.tabHistory}
 								</button>
 								<button className={`tab ${tab === 'notes' ? 'active' : ''}`} onClick={() => setTab('notes')}>
-									Notes
+									{t.drawer.tabNotes}
 								</button>
 							</div>
 						</div>
@@ -92,21 +95,21 @@ export default function ApplicationDrawer({
 							{tab === 'resume' && (
 								<div>
 									<div className='kv'>
-										<span className='k'>Statut</span>
+										<span className='k'>{t.drawer.status}</span>
 										<span className='v'>
 											<StatusStamp status={application.status} />
 										</span>
-										<span className='k'>Candidaté le</span>
-										<span className='v font-mono'>{formatDateFr(application.application_date)}</span>
-										<span className='k'>Prochaine relance</span>
-										<span className='v font-mono'>{formatDateFr(application.next_followup_date)}</span>
-										<span className='k'>Source</span>
-										<span className='v'>{application.offer_source ?? '—'}</span>
-										<span className='k'>Contact</span>
-										<span className='v'>{application.recruiter_contact ?? '— non renseigné —'}</span>
+										<span className='k'>{t.drawer.appliedOn}</span>
+										<span className='v font-mono'>{formatDate(application.application_date, locale)}</span>
+										<span className='k'>{t.drawer.nextFollowUp}</span>
+										<span className='v font-mono'>{formatDate(application.next_followup_date, locale)}</span>
+										<span className='k'>{t.drawer.source}</span>
+										<span className='v'>{application.offer_source ?? t.common.none}</span>
+										<span className='k'>{t.drawer.contact}</span>
+										<span className='v'>{application.recruiter_contact ?? t.common.notProvided}</span>
 									</div>
 									<div className='field'>
-										<label>Changer le statut</label>
+										<label>{t.drawer.changeStatus}</label>
 										<select
 											value={application.status}
 											disabled={pendingStatus}
@@ -121,7 +124,7 @@ export default function ApplicationDrawer({
 										>
 											{STATUSES.map((s) => (
 												<option key={s} value={s}>
-													{s}
+													{statusLabel(s, locale)}
 												</option>
 											))}
 										</select>
@@ -144,11 +147,11 @@ export default function ApplicationDrawer({
 										</div>
 									)}
 									{!application.cv_file_path && !application.cover_letter_file_path && (
-										<div className='panel-empty'>Aucun document généré pour cette candidature.</div>
+										<div className='panel-empty'>{t.drawer.noDocuments}</div>
 									)}
 									{application.cv_file_path && (
 										<div className='note' style={{ marginTop: 2 }}>
-											Chemins locaux — ouvre-les depuis le Finder ou ton éditeur.
+											{t.drawer.localPathsHint}
 										</div>
 									)}
 								</div>
@@ -156,14 +159,14 @@ export default function ApplicationDrawer({
 
 							{tab === 'hist' && (
 								<div className='timeline'>
-									{application.history.length === 0 && <div className='panel-empty'>Aucun historique.</div>}
+									{application.history.length === 0 && <div className='panel-empty'>{t.drawer.noHistory}</div>}
 									{application.history.map((h) => (
 										<div className='tl-item' key={h.id}>
 											<div className='tl-dot' />
 											<div>
-												<div className='tl-date font-mono'>{formatDateTimeFr(h.changed_at)}</div>
+												<div className='tl-date font-mono'>{formatDateTime(h.changed_at, locale)}</div>
 												<div className='tl-text'>
-													Statut → <b>{h.status}</b>
+													{t.drawer.statusArrow} <b>{statusLabel(h.status, locale)}</b>
 												</div>
 											</div>
 										</div>
@@ -178,13 +181,13 @@ export default function ApplicationDrawer({
 										className='note-box'
 										rows={6}
 										value={notes}
-										placeholder='Ajouter une note (contact, préparation d’entretien, points à retenir…)'
+										placeholder={t.drawer.notesPlaceholder}
 										onChange={(e) => setNotes(e.target.value)}
 										onBlur={handleNotesBlur}
 									/>
 									{savedNotes && (
 										<div className='note' style={{ marginTop: 6, color: 'var(--green)' }}>
-											Enregistré.
+											{t.drawer.notesSaved}
 										</div>
 									)}
 								</div>

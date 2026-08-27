@@ -16,6 +16,33 @@ import style as st
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "generated"
 
+SECTIONS = {
+    "fr": {
+        "skills": "COMPÉTENCES",
+        "experience": "EXPÉRIENCES PROFESSIONNELLES",
+        "projects": "PROJETS PERSONNELS",
+        "education": "FORMATIONS",
+        "certifications": "CERTIFICATIONS",
+        "languages": "LANGUES",
+        "subject": "Objet : ",
+        "tech": "Tech : ",
+    },
+    "en": {
+        "skills": "SKILLS",
+        "experience": "PROFESSIONAL EXPERIENCE",
+        "projects": "PERSONAL PROJECTS",
+        "education": "EDUCATION",
+        "certifications": "CERTIFICATIONS",
+        "languages": "LANGUAGES",
+        "subject": "Subject: ",
+        "tech": "Tech: ",
+    },
+}
+
+
+def sections_for(language: str) -> dict:
+    return SECTIONS.get(language, SECTIONS["fr"])
+
 
 # ---------------------------------------------------------------------------
 # Low-level OOXML helpers (docx-js exposed these as plain properties;
@@ -183,20 +210,20 @@ def add_bullets(doc: Document, bullets: list[str]):
         add_run(p, bullet, st.SIZE_BULLET, st.COLOR_BULLET)
 
 
-def add_tech_line(doc: Document, tech: list[str]):
+def add_tech_line(doc: Document, tech: list[str], tech_label: str):
     if not tech:
         return
     p = doc.add_paragraph()
-    add_run(p, "Tech : ", st.SIZE_TECH, st.COLOR_TECH_LABEL, bold=True)
+    add_run(p, tech_label, st.SIZE_TECH, st.COLOR_TECH_LABEL, bold=True)
     add_run(p, ", ".join(tech), st.SIZE_TECH, st.COLOR_TECH_VALUE)
 
 
-def add_experience_block(doc: Document, exp: dict):
+def add_experience_block(doc: Document, exp: dict, tech_label: str):
     add_job_header(doc, exp["company"], exp.get("dates", ""))
     if exp.get("role"):
         add_job_subtitle(doc, exp["role"])
     add_bullets(doc, exp.get("bullets", []))
-    add_tech_line(doc, exp.get("tech", []))
+    add_tech_line(doc, exp.get("tech", []), tech_label)
 
 
 def add_simple_list_line(doc: Document, label: str, meta: str, date_str: str):
@@ -208,33 +235,34 @@ def add_simple_list_line(doc: Document, label: str, meta: str, date_str: str):
     add_run(p, date_str, st.SIZE_JOB_DATES, st.COLOR_JOB_DATES, italic=True)
 
 
-def build_cv(profile: dict, content: dict) -> Document:
+def build_cv(profile: dict, content: dict, language: str = "fr") -> Document:
     doc = new_document()
+    sections = sections_for(language)
 
     add_header(doc, profile["identity"], content["headline"], content.get("tagline"))
     add_summary(doc, content.get("summary"))
 
-    add_section_header(doc, "COMPÉTENCES")
+    add_section_header(doc, sections["skills"])
     add_skills_table(doc, content["skills"])
 
-    add_section_header(doc, "EXPÉRIENCES PROFESSIONNELLES")
+    add_section_header(doc, sections["experience"])
     for exp in content["experience"]:
-        add_experience_block(doc, exp)
+        add_experience_block(doc, exp, sections["tech"])
 
     if content.get("personal_projects"):
-        add_section_header(doc, "PROJETS PERSONNELS")
+        add_section_header(doc, sections["projects"])
         for project in content["personal_projects"]:
-            add_experience_block(doc, project)
+            add_experience_block(doc, project, sections["tech"])
 
-    add_section_header(doc, "FORMATIONS")
+    add_section_header(doc, sections["education"])
     for edu in profile["education"]:
         add_simple_list_line(doc, edu["degree"], edu["institution"], edu["year"])
 
-    add_section_header(doc, "CERTIFICATIONS")
+    add_section_header(doc, sections["certifications"])
     for cert in profile["certifications"]:
         add_simple_list_line(doc, cert["name"], cert["organization"], cert["year"])
 
-    add_section_header(doc, "LANGUES")
+    add_section_header(doc, sections["languages"])
     p = doc.add_paragraph()
     languages_txt = "   •   ".join(f"{l['language']} – {l['level']}" for l in profile["languages"])
     if profile.get("driving_license"):
@@ -244,9 +272,10 @@ def build_cv(profile: dict, content: dict) -> Document:
     return doc
 
 
-def build_cover_letter(profile: dict, content: dict) -> Document:
+def build_cover_letter(profile: dict, content: dict, language: str = "fr") -> Document:
     doc = new_document()
     identity = profile["identity"]
+    sections = sections_for(language)
 
     p = doc.add_paragraph()
     add_run(p, identity["name"], st.SIZE_NAME, st.COLOR_NAME, bold=True)
@@ -264,7 +293,7 @@ def build_cover_letter(profile: dict, content: dict) -> Document:
 
     if content.get("subject"):
         p = doc.add_paragraph()
-        add_run(p, f"Objet : {content['subject']}", st.SIZE_SUMMARY, st.COLOR_SUMMARY, bold=True)
+        add_run(p, f"{sections['subject']}{content['subject']}", st.SIZE_SUMMARY, st.COLOR_SUMMARY, bold=True)
 
     doc.add_paragraph()
 

@@ -1,6 +1,10 @@
+'use client';
+
 import { ProposedContent } from '@/lib/types';
+import { useLocale } from '@/lib/locale-context';
 
 export default function CvPreview({ content }: { content: ProposedContent }) {
+	const { t } = useLocale();
 	const { cv } = content;
 	const firstExperience = cv.experience[0];
 	const allSkills = cv.skills.flatMap((s) => s.values).slice(0, 8);
@@ -8,13 +12,13 @@ export default function CvPreview({ content }: { content: ProposedContent }) {
 	return (
 		<div>
 			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-				<span className='note'>Aperçu du CV</span>
-				<span className='badge-live'>en direct</span>
+				<span className='note'>{t.cvPreview.preview}</span>
+				<span className='badge-live'>{t.cvPreview.live}</span>
 			</div>
 			<div className='preview-card'>
-				<div className='h1'>{cv.headline || 'Accroche du CV'}</div>
+				<div className='h1'>{cv.headline || t.cvPreview.headlinePlaceholder}</div>
 				<div className='tag'>
-					Candidature — {content.company || 'Entreprise'}
+					{t.cvPreview.applicationFor(content.company || t.reviewForm.company)}
 					{content.role ? ` · ${content.role}` : ''}
 				</div>
 				{cv.tagline && <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: -8, marginBottom: 14 }}>{cv.tagline}</p>}
@@ -42,8 +46,7 @@ export default function CvPreview({ content }: { content: ProposedContent }) {
 				)}
 				{cv.experience.length > 1 && (
 					<p className='note' style={{ marginTop: 10 }}>
-						+ {cv.experience.length - 1} autre{cv.experience.length - 1 > 1 ? 's' : ''} expérience
-						{cv.experience.length - 1 > 1 ? 's' : ''}
+						{t.cvPreview.moreExperience(cv.experience.length - 1)}
 					</p>
 				)}
 			</div>

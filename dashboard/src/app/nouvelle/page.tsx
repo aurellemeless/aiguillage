@@ -6,42 +6,28 @@ import ReviewForm from '@/components/review-form';
 import CvPreview from '@/components/cv-preview';
 import CopyablePath from '@/components/copyable-path';
 import { ProposedContent } from '@/lib/types';
+import { useLocale } from '@/lib/locale-context';
 
 type Step = 'offre' | 'analyse' | 'relecture' | 'generation' | 'termine';
 
-const STEPS: { key: Step; label: string }[] = [
-	{ key: 'offre', label: 'Offre' },
-	{ key: 'analyse', label: 'Analyse IA' },
-	{ key: 'relecture', label: 'Relecture' },
-	{ key: 'generation', label: 'Génération' },
-	{ key: 'termine', label: 'Terminé' },
-];
-
-function Stepper({ step }: { step: Step }) {
-	const currentIndex = STEPS.findIndex((s) => s.key === step);
-	return (
-		<div className='stepper'>
-			{STEPS.map((s, i) => (
-				<div key={s.key} style={{ display: 'contents' }}>
-					<div className={`step ${i < currentIndex ? 'done' : i === currentIndex ? 'active' : ''}`}>
-						<span className='num'>{i < currentIndex ? '✓' : i + 1}</span>
-						<span className='lbl'>{s.label}</span>
-					</div>
-					{i < STEPS.length - 1 && <div className={`step-line ${i < currentIndex ? 'done' : ''}`} />}
-				</div>
-			))}
-		</div>
-	);
-}
-
 export default function NouvelleCandidaturePage() {
 	const router = useRouter();
+	const { locale, t } = useLocale();
 	const [step, setStep] = useState<Step>('offre');
 	const [offerText, setOfferText] = useState('');
 	const [content, setContent] = useState<ProposedContent | null>(null);
 	const [generateLetter, setGenerateLetter] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [result, setResult] = useState<{ cvPath: string; coverLetterPath: string | null } | null>(null);
+
+	const STEPS: { key: Step; label: string }[] = [
+		{ key: 'offre', label: t.wizard.stepOffer },
+		{ key: 'analyse', label: t.wizard.stepAnalysis },
+		{ key: 'relecture', label: t.wizard.stepReview },
+		{ key: 'generation', label: t.wizard.stepGeneration },
+		{ key: 'termine', label: t.wizard.stepDone },
+	];
+	const currentIndex = STEPS.findIndex((s) => s.key === step);
 
 	async function handleAnalyze() {
 		setError(null);
@@ -50,10 +36,10 @@ export default function NouvelleCandidaturePage() {
 			const res = await fetch('/api/analyze', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ offerText }),
+				body: JSON.stringify({ offerText, language: locale }),
 			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error ?? "Échec de l'analyse.");
+			if (!res.ok) throw new Error(data.error ?? t.wizard.analyzeFailed);
 			setContent(data as ProposedContent);
 			setStep('relecture');
 		} catch (err) {
@@ -75,10 +61,11 @@ export default function NouvelleCandidaturePage() {
 					role: content.role,
 					cv: content.cv,
 					coverLetter: generateLetter ? content.cover_letter : undefined,
+					language: locale,
 				}),
 			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error ?? 'Échec de la génération.');
+			if (!res.ok) throw new Error(data.error ?? t.wizard.generateFailed);
 			setResult({ cvPath: data.cvPath, coverLetterPath: data.coverLetterPath });
 			setStep('termine');
 		} catch (err) {
@@ -99,26 +86,36 @@ export default function NouvelleCandidaturePage() {
 	return (
 		<div>
 			<div className='topbar'>
-				<h1>Nouvelle candidature</h1>
+				<h1>{t.wizard.title}</h1>
 			</div>
 			<div className='content'>
-				<Stepper step={step} />
+				<div className='stepper'>
+					{STEPS.map((s, i) => (
+						<div key={s.key} style={{ display: 'contents' }}>
+							<div className={`step ${i < currentIndex ? 'done' : i === currentIndex ? 'active' : ''}`}>
+								<span className='num'>{i < currentIndex ? '✓' : i + 1}</span>
+								<span className='lbl'>{s.label}</span>
+							</div>
+							{i < STEPS.length - 1 && <div className={`step-line ${i < currentIndex ? 'done' : ''}`} />}
+						</div>
+					))}
+				</div>
 				{error && <div className='error-box'>{error}</div>}
 
 				{step === 'offre' && (
 					<div style={{ maxWidth: 640 }}>
 						<div className='field'>
-							<label>Offre d&apos;emploi</label>
+							<label>{t.wizard.offerLabel}</label>
 							<textarea
 								rows={14}
-								placeholder="Colle ici le texte de l'offre…"
+								placeholder={t.wizard.offerPlaceholder}
 								value={offerText}
 								onChange={(e) => setOfferText(e.target.value)}
 							/>
 						</div>
 						<div className='wizard-actions'>
 							<button className='btn' onClick={handleAnalyze} disabled={!offerText.trim()}>
-								Analyser
+								{t.wizard.analyze}
 							</button>
 						</div>
 					</div>
@@ -127,7 +124,7 @@ export default function NouvelleCandidaturePage() {
 				{step === 'analyse' && (
 					<div className='center-state'>
 						<div className='scanline' />
-						<div>Lecture de l&apos;offre et rédaction du CV adapté… (jusqu&apos;à une minute)</div>
+						<div>{t.wizard.analyzing}</div>
 					</div>
 				)}
 
@@ -149,10 +146,10 @@ export default function NouvelleCandidaturePage() {
 				{step === 'relecture' && content && (
 					<div className='wizard-actions'>
 						<button className='btn subtle' onClick={() => setStep('offre')}>
-							Retour
+							{t.wizard.back}
 						</button>
 						<button className='btn' onClick={handleGenerate}>
-							Valider et générer
+							{t.wizard.approveAndGenerate}
 						</button>
 					</div>
 				)}
@@ -160,7 +157,7 @@ export default function NouvelleCandidaturePage() {
 				{step === 'generation' && (
 					<div className='center-state'>
 						<div className='scanline' />
-						<div>Génération du CV et de la lettre (.docx)…</div>
+						<div>{t.wizard.generating}</div>
 					</div>
 				)}
 
@@ -169,29 +166,29 @@ export default function NouvelleCandidaturePage() {
 						<div className='center-state' style={{ paddingBottom: 24 }}>
 							<div className='done-icon'>✓</div>
 							<div>
-								<b>Candidature enregistrée</b>
+								<b>{t.wizard.saved}</b>
 								<br />
-								<span className='note'>Ajoutée au registre — colonne « Envoyé »</span>
+								<span className='note'>{t.wizard.savedSub}</span>
 							</div>
 						</div>
 						<div style={{ maxWidth: 480, margin: '0 auto' }}>
 							<div className='field'>
-								<label>CV</label>
-								<CopyablePath label='CV' path={result.cvPath} />
+								<label>{t.wizard.cvLabel}</label>
+								<CopyablePath label={t.wizard.cvLabel} path={result.cvPath} />
 							</div>
 							{result.coverLetterPath && (
 								<div className='field'>
-									<label>Lettre</label>
-									<CopyablePath label='Lettre' path={result.coverLetterPath} />
+									<label>{t.wizard.letterLabel}</label>
+									<CopyablePath label={t.wizard.letterLabel} path={result.coverLetterPath} />
 								</div>
 							)}
 						</div>
 						<div className='wizard-actions' style={{ justifyContent: 'center' }}>
 							<button className='btn subtle' onClick={reset}>
-								Nouvelle candidature
+								{t.wizard.newApplication}
 							</button>
 							<button className='btn' onClick={() => router.push('/applications')}>
-								Voir dans le registre
+								{t.wizard.viewInBoard}
 							</button>
 						</div>
 					</div>

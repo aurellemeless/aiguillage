@@ -2,11 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeOffer } from '@/lib/claude';
+import { parseLocale } from '@/lib/i18n';
 
 const PROFILE_PATH = path.join(process.cwd(), '..', 'profile', 'profile.json');
 
 export async function POST(req: NextRequest) {
-	const { offerText } = await req.json();
+	const { offerText, language } = await req.json();
 
 	if (!offerText || typeof offerText !== 'string' || !offerText.trim()) {
 		return NextResponse.json({ error: "L'offre est vide." }, { status: 400 });
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
 	const profile = JSON.parse(fs.readFileSync(PROFILE_PATH, 'utf-8'));
 
 	try {
-		const content = await analyzeOffer(offerText, profile);
+		const content = await analyzeOffer(offerText, profile, parseLocale(language));
 		return NextResponse.json(content);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { insertApplication } from '@/lib/db';
 import { generateCoverLetter, generateCv } from '@/lib/generator-client';
 import { applicationSlug, slugify } from '@/lib/followup';
+import { parseLocale } from '@/lib/i18n';
 import { CoverLetterContent, CvContent } from '@/lib/types';
 
 const PROFILE_PATH = path.join(process.cwd(), '..', 'profile', 'profile.json');
@@ -19,6 +20,7 @@ interface GenerateRequestBody {
 	offerSource?: string;
 	cv: CvContent;
 	coverLetter?: CoverLetterContent;
+	language?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -30,12 +32,13 @@ export async function POST(req: NextRequest) {
 
 	const subdir = applicationSlug(body.company, body.role);
 	const candidateSlug = candidateNameSlug();
+	const language = parseLocale(body.language);
 
 	try {
-		const cvResult = await generateCv(body.cv, `CV_${candidateSlug}_${subdir}.docx`, subdir);
+		const cvResult = await generateCv(body.cv, `CV_${candidateSlug}_${subdir}.docx`, subdir, language);
 
 		const letterResult = body.coverLetter
-			? await generateCoverLetter(body.coverLetter, `Lettre_${candidateSlug}_${subdir}.docx`, subdir)
+			? await generateCoverLetter(body.coverLetter, `Lettre_${candidateSlug}_${subdir}.docx`, subdir, language)
 			: null;
 
 		const applicationId = insertApplication({
