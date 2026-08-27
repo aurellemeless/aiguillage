@@ -1,0 +1,81 @@
+{
+  "identity": {
+    "name": "Alex Martin",
+    "title": "Développeur Full Stack JavaScript",
+    "years_experience": 6,
+    "location": "Lyon, France",
+    "email": "alex.martin@example.com",
+    "phone": "+33 6 00 00 00 00",
+    "github": "github.com/alex-martin",
+    "linkedin": "linkedin.com/in/alex-martin"
+  },
+
+  "skills": {
+    "languages": ["JavaScript (ES6+)", "TypeScript", "Python"],
+    "frontend": ["React", "Next.js", "Redux"],
+    "backend": ["Node.js", "Express", "NestJS"],
+    "databases": ["PostgreSQL", "MongoDB", "Redis"],
+    "cicd_cloud": ["Docker", "GitHub Actions", "AWS (EC2, S3)"],
+    "design": ["REST", "TDD", "Agile/Scrum"]
+  },
+
+  "skills_depth_notes": [
+    {
+      "skill": "AWS Lambda",
+      "level": "theoretical",
+      "note": "Connaissance théorique via la documentation et un tutoriel, pas de mise en œuvre projet vérifiée. Présenter comme notion, jamais comme une puce d'expérience active."
+    },
+    {
+      "skill": "GraphQL",
+      "level": "real",
+      "note": "Expérience réelle sur le projet Client B (API publique)."
+    }
+  ],
+
+  "experience": [
+    {
+      "company": "Client B",
+      "role": "Développeur Full Stack",
+      "dates": "Jan 2022 – Présent",
+      "bullets": [
+        "Conception et développement d'une API GraphQL consommée par 3 applications front",
+        "Mise en place d'une suite de tests end-to-end (Cypress) réduisant les régressions en production"
+      ],
+      "tech": ["Node.js", "GraphQL", "React", "PostgreSQL", "Docker"]
+    },
+    {
+      "company": "Client A",
+      "role": "Développeur Front-End",
+      "dates": "Sept 2019 – Déc 2021",
+      "bullets": [
+        "Développement de l'interface d'administration en React/Redux",
+        "Migration progressive d'un legacy jQuery vers React"
+      ],
+      "tech": ["React", "Redux", "JavaScript", "SCSS"]
+    }
+  ],
+
+  "education": [
+    { "degree": "Master – Informatique", "institution": "Université Example", "year": "2019" }
+  ],
+
+  "certifications": [
+    { "name": "AWS Certified Cloud Practitioner", "organization": "AWS", "year": "2023" }
+  ],
+
+  "personal_projects": [
+    {
+      "name": "Nom du projet",
+      "description": "Description courte du projet personnel : ce qu'il fait, pour qui, et son état (en production, en cours...).",
+      "status": "En production",
+      "tech": ["Next.js", "PostgreSQL"],
+      "note": "Précise ici ce qui est vérifiable (démo en ligne, dépôt public...) pour que le CV ne présente que des faits solides."
+    }
+  ],
+
+  "languages": [
+    { "language": "Français", "level": "Langue maternelle" },
+    { "language": "Anglais", "level": "Courant (professionnel)" }
+  ],
+  "driving_license": "Permis B"
+}
