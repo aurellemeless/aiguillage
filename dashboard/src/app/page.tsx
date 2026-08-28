@@ -4,6 +4,7 @@ import { isFollowupDue } from '@/lib/followup';
 import { daysSince, formatDate, formatDateTime } from '@/lib/status';
 import { dayPrefix, getDict, statusLabel } from '@/lib/i18n';
 import { getServerLocale } from '@/lib/server-locale';
+import SearchBox from '@/components/search-box';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ export default async function DashboardPage() {
 		<div>
 			<div className='topbar'>
 				<h1>{t.dashboard.title}</h1>
-				<div className='search'>⌕ {t.common.search}</div>
+				<SearchBox placeholder={t.common.search} />
 				<NextLink href='/nouvelle' className='btn'>
 					{t.common.newApplicationBtn}
 				</NextLink>

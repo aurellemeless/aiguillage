@@ -13,6 +13,13 @@ import ApplicationDrawer from '@/components/application-drawer';
 
 const CLOSED_STATUSES = new Set(['Refusé', 'Sans réponse/Abandonné', 'Offre reçue']);
 
+function normalize(text: string): string {
+	return text
+		.normalize('NFD')
+		.replace(/[̀-ͯ]/g, '')
+		.toLowerCase();
+}
+
 export default function CandidaturesBoard({ applications }: { applications: ApplicationWithHistory[] }) {
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -22,6 +29,7 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 	const [items, setItems] = useState(applications);
 	const [draggingId, setDraggingId] = useState<number | null>(null);
 	const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
+	const [query, setQuery] = useState('');
 
 	useEffect(() => {
 		setItems(applications);
@@ -30,7 +38,15 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 	useEffect(() => {
 		const openParam = searchParams.get('open');
 		if (openParam) setOpenId(Number(openParam));
+		const q = searchParams.get('q');
+		if (q) setQuery(q);
 	}, [searchParams]);
+
+	const filteredItems = useMemo(() => {
+		const needle = normalize(query.trim());
+		if (!needle) return items;
+		return items.filter((a) => normalize(a.company).includes(needle) || normalize(a.role).includes(needle));
+	}, [items, query]);
 
 	function ageLabel(app: ApplicationWithHistory): string {
 		if (app.status === 'Brouillon') return '—';
@@ -41,8 +57,8 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 	const selected = useMemo(() => items.find((a) => a.id === openId) ?? null, [items, openId]);
 
 	const columns = useMemo(
-		() => STATUSES.map((status) => ({ status, items: items.filter((a) => a.status === status) })),
-		[items]
+		() => STATUSES.map((status) => ({ status, items: filteredItems.filter((a) => a.status === status) })),
+		[filteredItems]
 	);
 
 	async function moveTo(applicationId: number, newStatus: string) {
@@ -76,7 +92,16 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 						{t.candidatures.list}
 					</button>
 				</div>
-				<span className='note'>{t.candidatures.count(items.length)}</span>
+				<div className='search' style={{ minWidth: 240 }}>
+					⌕
+					<input
+						value={query}
+						onChange={(e) => setQuery(e.target.value)}
+						placeholder={t.common.search}
+						style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, font: 'inherit' }}
+					/>
+				</div>
+				<span className='note'>{t.candidatures.count(filteredItems.length)}</span>
 			</div>
 
 			{mode === 'kanban' && (
@@ -138,7 +163,7 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 							</tr>
 						</thead>
 						<tbody>
-							{items.map((app) => (
+							{filteredItems.map((app) => (
 								<tr key={app.id} onClick={() => setOpenId(app.id)}>
 									<td>
 										<b>{app.company}</b>
