@@ -34,6 +34,8 @@ reuse it, adapt it, or take inspiration from it with their own profile.
   the CV and cover letter.
 - Profile setup from an existing CV (PDF or DOCX): upload it, review the
   extracted data, and save it as `profile/profile.json`.
+- Excel export of all applications and their full status-change history, for
+  analysis outside the app.
 
 ## Requirements
 
