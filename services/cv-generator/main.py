@@ -11,7 +11,7 @@ import generator
 
 PROFILE_PATH = Path(__file__).resolve().parent.parent.parent / "profile" / "profile.json"
 
-app = FastAPI(title="CV Generator")
+app = FastAPI(title="CV Generator", version="1.0.0")
 
 
 def load_profile() -> dict:
