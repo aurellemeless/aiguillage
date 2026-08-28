@@ -1,8 +1,10 @@
+import io
 import json
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from docx import Document as DocxDocument
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 import generator
@@ -73,3 +75,19 @@ def generate_cover_letter(payload: GenerateCoverLetterRequest):
     doc = generator.build_cover_letter(profile, content, payload.language)
     path = generator.save_document(doc, payload.output_name, payload.subdir or "")
     return {"path": str(path)}
+
+
+@app.post("/extract-docx-text")
+async def extract_docx_text(file: UploadFile = File(...)):
+    raw = await file.read()
+    try:
+        doc = DocxDocument(io.BytesIO(raw))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Fichier .docx illisible : {exc}")
+    paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                if cell.text.strip():
+                    paragraphs.append(cell.text)
+    return {"text": "\n".join(paragraphs)}

@@ -78,20 +78,112 @@ Instructions strictes :
 }`;
 }
 
+function profileExtractionSchema(language: Locale): string {
+	return language === 'en'
+		? `{
+  "identity": {"name": "...", "title": "...", "years_experience": 0, "location": "...", "email": "...", "phone": "...", "github": "...", "linkedin": "..."},
+  "skills": {"category": ["...", "..."]},
+  "skills_depth_notes": [],
+  "experience": [{"company": "...", "role": "...", "dates": "...", "bullets": ["..."], "tech": ["..."]}],
+  "education": [{"degree": "...", "institution": "...", "year": "..."}],
+  "certifications": [{"name": "...", "organization": "...", "year": "..."}],
+  "personal_projects": [],
+  "languages": [{"language": "...", "level": "..."}],
+  "driving_license": null
+}`
+		: `{
+  "identity": {"name": "...", "title": "...", "years_experience": 0, "location": "...", "email": "...", "phone": "...", "github": "...", "linkedin": "..."},
+  "skills": {"catégorie": ["...", "..."]},
+  "skills_depth_notes": [],
+  "experience": [{"company": "...", "role": "...", "dates": "...", "bullets": ["..."], "tech": ["..."]}],
+  "education": [{"degree": "...", "institution": "...", "year": "..."}],
+  "certifications": [{"name": "...", "organization": "...", "year": "..."}],
+  "personal_projects": [],
+  "languages": [{"language": "...", "level": "..."}],
+  "driving_license": null
+}`;
+}
+
+function buildProfileExtractionPromptFromFile(filePath: string, language: Locale): string {
+	const schema = profileExtractionSchema(language);
+	if (language === 'en') {
+		return `You are an assistant who extracts structured profile data from a candidate's CV, to build a reusable JSON profile.
+
+Use the Read tool to read the CV file at this path: ${filePath}
+
+Strict instructions:
+- Never invent information absent from the CV: leave a field empty ("" or []) if it's not present.
+- "skills_depth_notes" and "personal_projects" MUST stay empty arrays ([]): these are nuances only the candidate can fill in themselves, do not infer them from the CV.
+- Group skills under whatever categories make sense for this CV (e.g. languages, frontend, backend, databases...) as a key → list-of-strings map.
+- "experience" must list ALL professional experience found in the CV, most recent first, without omitting any.
+- Keep all textual content in its original language — do not translate anything.
+- Reply ONLY with a valid JSON object, no text before or after, no markdown fences, matching exactly this schema:
+${schema}`;
+	}
+
+	return `Tu es un assistant qui extrait les données structurées du CV d'un candidat, pour construire un profil JSON réutilisable.
+
+Utilise l'outil Read pour lire le fichier CV situé à ce chemin : ${filePath}
+
+Instructions strictes :
+- N'invente jamais d'information absente du CV : laisse un champ vide ("" ou []) si l'info n'est pas présente.
+- "skills_depth_notes" et "personal_projects" DOIVENT rester des tableaux vides ([]) : ce sont des nuances que seul le candidat peut renseigner lui-même, ne les déduis pas du CV.
+- Regroupe les compétences sous les catégories qui te semblent pertinentes pour ce CV (ex : langages, frontend, backend, bases de données...) sous forme de clé → liste de valeurs.
+- "experience" doit lister TOUTES les expériences professionnelles trouvées dans le CV, la plus récente en premier, sans en omettre.
+- Conserve tout le contenu textuel dans sa langue d'origine — ne traduis rien.
+- Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, respectant exactement ce schéma :
+${schema}`;
+}
+
+function buildProfileExtractionPromptFromText(cvText: string, language: Locale): string {
+	const schema = profileExtractionSchema(language);
+	if (language === 'en') {
+		return `You are an assistant who extracts structured profile data from a candidate's CV, to build a reusable JSON profile.
+
+Here is the CV text:
+"""
+${cvText}
+"""
+
+Strict instructions:
+- Never invent information absent from the CV: leave a field empty ("" or []) if it's not present.
+- "skills_depth_notes" and "personal_projects" MUST stay empty arrays ([]): these are nuances only the candidate can fill in themselves, do not infer them from the CV.
+- Group skills under whatever categories make sense for this CV (e.g. languages, frontend, backend, databases...) as a key → list-of-strings map.
+- "experience" must list ALL professional experience found in the CV, most recent first, without omitting any.
+- Keep all textual content in its original language — do not translate anything.
+- Reply ONLY with a valid JSON object, no text before or after, no markdown fences, matching exactly this schema:
+${schema}`;
+	}
+
+	return `Tu es un assistant qui extrait les données structurées du CV d'un candidat, pour construire un profil JSON réutilisable.
+
+Voici le texte du CV :
+"""
+${cvText}
+"""
+
+Instructions strictes :
+- N'invente jamais d'information absente du CV : laisse un champ vide ("" ou []) si l'info n'est pas présente.
+- "skills_depth_notes" et "personal_projects" DOIVENT rester des tableaux vides ([]) : ce sont des nuances que seul le candidat peut renseigner lui-même, ne les déduis pas du CV.
+- Regroupe les compétences sous les catégories qui te semblent pertinentes pour ce CV (ex : langages, frontend, backend, bases de données...) sous forme de clé → liste de valeurs.
+- "experience" doit lister TOUTES les expériences professionnelles trouvées dans le CV, la plus récente en premier, sans en omettre.
+- Conserve tout le contenu textuel dans sa langue d'origine — ne traduis rien.
+- Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, respectant exactement ce schéma :
+${schema}`;
+}
+
 function stripMarkdownFences(text: string): string {
 	const trimmed = text.trim();
 	const fenceMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
 	return fenceMatch ? fenceMatch[1] : trimmed;
 }
 
-export async function analyzeOffer(offerText: string, profile: object, language: Locale = 'fr'): Promise<ProposedContent> {
-	const prompt = buildPrompt(offerText, profile, language);
-
-	const { stdout } = await execFileAsync(
-		'claude',
-		['-p', prompt, '--output-format', 'json', '--disallowedTools', DISALLOWED_TOOLS],
-		{ cwd: PROJECT_ROOT, timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }
-	);
+async function runClaudeForJson(prompt: string, toolsFlag: string[]): Promise<unknown> {
+	const { stdout } = await execFileAsync('claude', ['-p', prompt, '--output-format', 'json', ...toolsFlag], {
+		cwd: PROJECT_ROOT,
+		timeout: 120_000,
+		maxBuffer: 10 * 1024 * 1024,
+	});
 
 	const envelope = JSON.parse(stdout);
 	if (envelope.is_error) {
@@ -102,10 +194,23 @@ export async function analyzeOffer(offerText: string, profile: object, language:
 	const jsonText = stripMarkdownFences(rawResult);
 
 	try {
-		return JSON.parse(jsonText) as ProposedContent;
+		return JSON.parse(jsonText);
 	} catch {
-		throw new Error(
-			`Impossible de parser la réponse de Claude Code en JSON. Réponse brute : ${rawResult}`
-		);
+		throw new Error(`Impossible de parser la réponse de Claude Code en JSON. Réponse brute : ${rawResult}`);
 	}
+}
+
+export async function analyzeOffer(offerText: string, profile: object, language: Locale = 'fr'): Promise<ProposedContent> {
+	const prompt = buildPrompt(offerText, profile, language);
+	return runClaudeForJson(prompt, ['--disallowedTools', DISALLOWED_TOOLS]) as Promise<ProposedContent>;
+}
+
+export async function extractProfileFromFile(filePath: string, language: Locale = 'fr'): Promise<object> {
+	const prompt = buildProfileExtractionPromptFromFile(filePath, language);
+	return runClaudeForJson(prompt, ['--allowedTools', 'Read']) as Promise<object>;
+}
+
+export async function extractProfileFromText(cvText: string, language: Locale = 'fr'): Promise<object> {
+	const prompt = buildProfileExtractionPromptFromText(cvText, language);
+	return runClaudeForJson(prompt, ['--disallowedTools', DISALLOWED_TOOLS]) as Promise<object>;
 }

@@ -4,6 +4,8 @@ __pycache__/
 node_modules/
 .next/
 .env
+.DS_Store
 data/*.db
 data/generated/
+data/tmp/
 profile/profile.json

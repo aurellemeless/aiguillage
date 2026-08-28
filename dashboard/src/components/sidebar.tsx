@@ -14,6 +14,7 @@ export default function Sidebar() {
 		{ href: '/', label: t.nav.dashboard, icon: '▣' },
 		{ href: '/applications', label: t.nav.applications, icon: '▤' },
 		{ href: '/nouvelle', label: t.nav.newApplication, icon: '✎' },
+		{ href: '/profil', label: t.nav.profile, icon: '⚙' },
 	];
 
 	return (

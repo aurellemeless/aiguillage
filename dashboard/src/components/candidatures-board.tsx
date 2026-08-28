@@ -102,6 +102,9 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 					/>
 				</div>
 				<span className='note'>{t.candidatures.count(filteredItems.length)}</span>
+				<a href='/api/applications/export' className='btn subtle'>
+					{t.export.button}
+				</a>
 			</div>
 
 			{mode === 'kanban' && (
