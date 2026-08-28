@@ -115,6 +115,12 @@ a {
 	font-size: 13px;
 	min-width: 220px;
 }
+.search input {
+	color: var(--ink);
+}
+.search input::placeholder {
+	color: var(--ink-faint);
+}
 
 /* ---------- buttons & fields ---------- */
 .btn {
