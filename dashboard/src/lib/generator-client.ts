@@ -33,3 +33,16 @@ export function generateCoverLetter(
 ): Promise<{ path: string }> {
 	return postJson('/generate-cover-letter', { ...content, output_name: outputName, subdir, language });
 }
+
+export async function extractDocxText(buffer: Buffer, filename: string): Promise<string> {
+	const formData = new FormData();
+	formData.append('file', new Blob([new Uint8Array(buffer)]), filename);
+
+	const res = await fetch(`${GENERATOR_BASE_URL}/extract-docx-text`, { method: 'POST', body: formData });
+	if (!res.ok) {
+		const detail = await res.text();
+		throw new Error(`Le service de génération a échoué (${res.status}) : ${detail}`);
+	}
+	const data = (await res.json()) as { text: string };
+	return data.text;
+}

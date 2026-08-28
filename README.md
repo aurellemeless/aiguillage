@@ -32,6 +32,8 @@ reuse it, adapt it, or take inspiration from it with their own profile.
 - CLI tracking (`tracker/tracker_cli.py`) alongside the dashboard.
 - French/English interface switch, also used as the generation language for
   the CV and cover letter.
+- Profile setup from an existing CV (PDF or DOCX): upload it, review the
+  extracted data, and save it as `profile/profile.json`.
 
 ## Requirements
 
@@ -42,14 +44,16 @@ reuse it, adapt it, or take inspiration from it with their own profile.
 
 ## Setup
 
-1. **Clone the repo, then create your profile** from the provided template:
+1. **Clone the repo, then create your profile.** Either copy the provided
+   template and fill it in by hand:
 
    ```bash
    cp profile/profile-default.json profile/profile.json
    ```
 
-   Fill in `profile/profile.json` with your own information (identity,
-   skills, experience, education...). This file holds personal data: it's
+   or start the app and use the **Profile** page to import your existing CV
+   (PDF/DOCX) — it extracts your information and lets you review it before
+   saving. Either way, `profile/profile.json` holds personal data: it's
    git-ignored and should never be committed.
 
 2. **CV generation service** (`services/cv-generator`):
