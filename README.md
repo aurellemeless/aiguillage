@@ -16,6 +16,14 @@ This project is built for **local, single-user** use — there's no
 authentication or multi-account support. It's open source so others can
 reuse it, adapt it, or take inspiration from it with their own profile.
 
+## Screenshots
+
+|                          Dashboard                          |                        Kanban board                         |                       Application detail                       |
+| :-----------------------------------------------------------: | :-----------------------------------------------------------: | :----------------------------------------------------------: |
+| ![Dashboard](docs/screenshots/dashboard.jpg) | ![Kanban board](docs/screenshots/kanban.jpg) | ![Application detail panel](docs/screenshots/drawer.jpg) |
+
+*(Screenshots use sample data — not a real job search.)*
+
 ## Features
 
 - Analyzes a plain-text job posting with Claude Code (headless), based on
