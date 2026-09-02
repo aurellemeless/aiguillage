@@ -5,6 +5,7 @@ import { daysSince, formatDate, formatDateTime } from '@/lib/status';
 import { dayPrefix, getDict, statusLabel } from '@/lib/i18n';
 import { getServerLocale } from '@/lib/server-locale';
 import SearchBox from '@/components/search-box';
+import MenuButton from '@/components/menu-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,7 @@ export default async function DashboardPage() {
 	return (
 		<div>
 			<div className='topbar'>
+				<MenuButton />
 				<h1>{t.dashboard.title}</h1>
 				<SearchBox placeholder={t.common.search} />
 				<NextLink href='/nouvelle' className='btn'>

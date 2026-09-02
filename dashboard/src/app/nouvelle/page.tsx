@@ -6,9 +6,18 @@ import ReviewForm from '@/components/review-form';
 import CvPreview from '@/components/cv-preview';
 import CopyablePath from '@/components/copyable-path';
 import { ProposedContent } from '@/lib/types';
+import { Locale } from '@/lib/i18n';
 import { useLocale } from '@/lib/locale-context';
+import MenuButton from '@/components/menu-button';
 
 type Step = 'offre' | 'analyse' | 'relecture' | 'generation' | 'termine';
+
+interface GenerateResult {
+	cvPath: string;
+	coverLetterPath: string | null;
+	secondaryCvPath?: string;
+	secondaryCoverLetterPath?: string | null;
+}
 
 export default function NouvelleCandidaturePage() {
 	const router = useRouter();
@@ -16,9 +25,14 @@ export default function NouvelleCandidaturePage() {
 	const [step, setStep] = useState<Step>('offre');
 	const [offerText, setOfferText] = useState('');
 	const [content, setContent] = useState<ProposedContent | null>(null);
+	const [contentLocale, setContentLocale] = useState<Locale>(locale);
+	const [alsoOtherLanguage, setAlsoOtherLanguage] = useState(false);
 	const [generateLetter, setGenerateLetter] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [result, setResult] = useState<{ cvPath: string; coverLetterPath: string | null } | null>(null);
+	const [result, setResult] = useState<GenerateResult | null>(null);
+
+	const otherLocale: Locale = contentLocale === 'en' ? 'fr' : 'en';
+	const langLabel = (l: Locale) => (l === 'en' ? t.reviewForm.langEn : t.reviewForm.langFr);
 
 	const STEPS: { key: Step; label: string }[] = [
 		{ key: 'offre', label: t.wizard.stepOffer },
@@ -41,6 +55,7 @@ export default function NouvelleCandidaturePage() {
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.wizard.analyzeFailed);
 			setContent(data as ProposedContent);
+			setContentLocale(locale);
 			setStep('relecture');
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
@@ -61,12 +76,43 @@ export default function NouvelleCandidaturePage() {
 					role: content.role,
 					cv: content.cv,
 					coverLetter: generateLetter ? content.cover_letter : undefined,
-					language: locale,
+					language: contentLocale,
 				}),
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.wizard.generateFailed);
-			setResult({ cvPath: data.cvPath, coverLetterPath: data.coverLetterPath });
+
+			const finalResult: GenerateResult = { cvPath: data.cvPath, coverLetterPath: data.coverLetterPath };
+
+			if (alsoOtherLanguage) {
+				const analyzeRes = await fetch('/api/analyze', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ offerText, language: otherLocale }),
+				});
+				const otherContent = (await analyzeRes.json()) as ProposedContent;
+				if (!analyzeRes.ok) throw new Error(t.wizard.generateFailed);
+
+				const secondRes = await fetch('/api/generate', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						company: otherContent.company,
+						role: otherContent.role,
+						cv: otherContent.cv,
+						coverLetter: generateLetter ? otherContent.cover_letter : undefined,
+						language: otherLocale,
+						subdir: data.subdir,
+						skipRecord: true,
+					}),
+				});
+				const secondData = await secondRes.json();
+				if (!secondRes.ok) throw new Error(secondData.error ?? t.wizard.generateFailed);
+				finalResult.secondaryCvPath = secondData.cvPath;
+				finalResult.secondaryCoverLetterPath = secondData.coverLetterPath;
+			}
+
+			setResult(finalResult);
 			setStep('termine');
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
@@ -78,6 +124,7 @@ export default function NouvelleCandidaturePage() {
 		setStep('offre');
 		setOfferText('');
 		setContent(null);
+		setAlsoOtherLanguage(false);
 		setGenerateLetter(true);
 		setResult(null);
 		setError(null);
@@ -86,6 +133,7 @@ export default function NouvelleCandidaturePage() {
 	return (
 		<div>
 			<div className='topbar'>
+				<MenuButton />
 				<h1>{t.wizard.title}</h1>
 			</div>
 			<div className='content'>
@@ -136,9 +184,13 @@ export default function NouvelleCandidaturePage() {
 								onChange={setContent}
 								generateCoverLetter={generateLetter}
 								onToggleGenerateCoverLetter={setGenerateLetter}
+								primaryLanguageLabel={langLabel(contentLocale)}
+								secondaryLanguageLabel={langLabel(otherLocale)}
+								secondaryLanguageChecked={alsoOtherLanguage}
+								onToggleSecondaryLanguage={setAlsoOtherLanguage}
 							/>
 						</div>
-						<div style={{ position: 'sticky', top: 90 }}>
+						<div className='wizard-preview-sticky'>
 							<CvPreview content={content} />
 						</div>
 					</div>
@@ -173,13 +225,33 @@ export default function NouvelleCandidaturePage() {
 						</div>
 						<div style={{ maxWidth: 480, margin: '0 auto' }}>
 							<div className='field'>
-								<label>{t.wizard.cvLabel}</label>
+								<label>
+									{t.wizard.cvLabel} ({langLabel(contentLocale)})
+								</label>
 								<CopyablePath label={t.wizard.cvLabel} path={result.cvPath} />
 							</div>
 							{result.coverLetterPath && (
 								<div className='field'>
-									<label>{t.wizard.letterLabel}</label>
+									<label>
+										{t.wizard.letterLabel} ({langLabel(contentLocale)})
+									</label>
 									<CopyablePath label={t.wizard.letterLabel} path={result.coverLetterPath} />
+								</div>
+							)}
+							{result.secondaryCvPath && (
+								<div className='field'>
+									<label>
+										{t.wizard.cvLabel} ({langLabel(otherLocale)})
+									</label>
+									<CopyablePath label={t.wizard.cvLabel} path={result.secondaryCvPath} />
+								</div>
+							)}
+							{result.secondaryCoverLetterPath && (
+								<div className='field'>
+									<label>
+										{t.wizard.letterLabel} ({langLabel(otherLocale)})
+									</label>
+									<CopyablePath label={t.wizard.letterLabel} path={result.secondaryCoverLetterPath} />
 								</div>
 							)}
 						</div>

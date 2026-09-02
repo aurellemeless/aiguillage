@@ -4,6 +4,7 @@ import { listApplicationsWithHistory } from '@/lib/db';
 import CandidaturesBoard from '@/components/candidatures-board';
 import { getDict } from '@/lib/i18n';
 import { getServerLocale } from '@/lib/server-locale';
+import MenuButton from '@/components/menu-button';
 
 // This page reads a local SQLite file that changes at runtime — never prerender it statically.
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,7 @@ export default async function ApplicationsPage() {
 	return (
 		<div>
 			<div className='topbar'>
+				<MenuButton />
 				<h1>{t.candidatures.title}</h1>
 				<NextLink href='/nouvelle' className='btn' style={{ marginLeft: 'auto' }}>
 					{t.common.newApplicationBtn}

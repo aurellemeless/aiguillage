@@ -3,6 +3,7 @@ import { IBM_Plex_Sans, IBM_Plex_Serif, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { Provider } from '@/components/ui/provider';
 import { LocaleProvider } from '@/lib/locale-context';
+import { SidebarProvider } from '@/lib/sidebar-context';
 import { getServerLocale } from '@/lib/server-locale';
 import Sidebar from '@/components/sidebar';
 
@@ -49,10 +50,12 @@ export default async function RootLayout({
 			<body>
 				<Provider>
 					<LocaleProvider initialLocale={locale}>
-						<div style={{ display: 'flex', minHeight: '100vh' }}>
-							<Sidebar />
-							<div style={{ flex: 1, minWidth: 0 }}>{children}</div>
-						</div>
+						<SidebarProvider>
+							<div className='app-shell'>
+								<Sidebar />
+								<div className='app-main'>{children}</div>
+							</div>
+						</SidebarProvider>
 					</LocaleProvider>
 				</Provider>
 			</body>

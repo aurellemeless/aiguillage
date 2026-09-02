@@ -85,6 +85,43 @@ a {
 }
 
 /* ---------- layout ---------- */
+.app-shell {
+	display: flex;
+	min-height: 100vh;
+}
+.app-main {
+	flex: 1;
+	min-width: 0;
+}
+.sidebar {
+	border-right: 1px solid var(--rule);
+	background: var(--surface);
+	padding: 22px 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 28px;
+	width: 236px;
+	flex: 0 0 236px;
+	min-height: 100vh;
+}
+.sidebar-backdrop {
+	display: none;
+}
+.menu-btn {
+	display: none;
+	border: 1px solid var(--rule);
+	background: var(--surface);
+	color: var(--ink);
+	border-radius: 5px;
+	width: 34px;
+	height: 34px;
+	align-items: center;
+	justify-content: center;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	flex: none;
+}
 .topbar {
 	display: flex;
 	align-items: center;
@@ -157,6 +194,16 @@ a {
 .btn.subtle:hover {
 	background: var(--surface-2);
 }
+.btn.danger-ghost {
+	background: transparent;
+	border-color: transparent;
+	color: var(--rust);
+	padding: 4px 8px;
+	font-size: 12px;
+}
+.btn.danger-ghost:hover {
+	background: var(--rust-soft);
+}
 
 .field {
 	display: flex;
@@ -186,6 +233,258 @@ a {
 .field textarea:focus {
 	border-color: var(--accent);
 	outline: none;
+}
+
+.field-grid-2 {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0 16px;
+}
+
+/* ---------- profile form: import card, repeatable rows/cards, tags ---------- */
+.import-card {
+	background: var(--surface);
+	border: 1px dashed var(--rule-strong);
+	border-radius: 8px;
+	padding: 18px 20px;
+	margin-bottom: 30px;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+.import-card .icon {
+	width: 38px;
+	height: 38px;
+	border-radius: 50%;
+	background: var(--accent-soft);
+	color: var(--accent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 16px;
+	flex: none;
+}
+.import-card .txt {
+	flex: 1;
+}
+.import-card .txt b {
+	font-size: 13.5px;
+}
+.import-card .txt span {
+	display: block;
+	font-size: 12px;
+	color: var(--ink-soft);
+	margin-top: 2px;
+}
+.import-card .btn {
+	flex: none;
+}
+
+.form-section {
+	margin-bottom: 34px;
+}
+.form-section-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	margin-bottom: 4px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid var(--rule);
+}
+.form-section-head h2 {
+	font-size: 16px;
+}
+.form-section-head .hint {
+	font-size: 11.5px;
+	color: var(--ink-faint);
+}
+.form-section-body {
+	padding-top: 16px;
+}
+
+.card-item {
+	background: var(--surface);
+	border: 1px solid var(--rule);
+	border-radius: 6px;
+	padding: 14px 16px;
+	margin-bottom: 12px;
+	position: relative;
+}
+.card-item .remove {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+}
+.exp-row {
+	display: flex;
+	gap: 12px;
+}
+.skill-row {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 8px;
+	align-items: center;
+}
+.skill-label-input,
+.skill-values-input {
+	border: 1px solid var(--rule);
+	border-radius: 5px;
+	padding: 9px 11px;
+	background: var(--paper);
+	color: var(--ink);
+}
+.skill-label-input {
+	width: 160px;
+	flex: none;
+}
+.skill-values-input {
+	flex: 1;
+	min-width: 0;
+}
+.row-item {
+	display: grid;
+	grid-template-columns: 1.4fr 1.4fr 90px auto;
+	gap: 10px;
+	align-items: center;
+	margin-bottom: 8px;
+}
+.row-item.cols-2 {
+	grid-template-columns: 1fr 1fr auto;
+}
+.row-item input {
+	border: 1px solid var(--rule);
+	border-radius: 5px;
+	padding: 8px 10px;
+	background: var(--paper);
+	color: var(--ink);
+	font-size: 13px;
+	font-family: inherit;
+}
+.add-row {
+	border: 1px dashed var(--rule-strong);
+	background: transparent;
+	color: var(--ink-soft);
+	border-radius: 6px;
+	padding: 8px 12px;
+	font-size: 12.5px;
+	width: 100%;
+	text-align: center;
+	cursor: pointer;
+	font-family: inherit;
+}
+.add-row:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+.tag-input {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	border: 1px solid var(--rule);
+	border-radius: 5px;
+	padding: 7px 8px;
+	background: var(--paper);
+}
+.tag {
+	background: var(--accent-soft);
+	color: var(--accent);
+	font-size: 11.5px;
+	font-family: var(--font-mono), monospace;
+	padding: 3px 8px 3px 10px;
+	border-radius: 3px;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+.tag button {
+	border: none;
+	background: none;
+	color: inherit;
+	cursor: pointer;
+	font-size: 12px;
+	opacity: 0.7;
+	padding: 0;
+	line-height: 1;
+}
+.tag-input input {
+	border: none;
+	outline: none;
+	background: transparent;
+	flex: 1;
+	min-width: 120px;
+	font-size: 13px;
+	color: var(--ink);
+	font-family: inherit;
+}
+
+details.advanced {
+	border: 1px solid var(--rule);
+	border-radius: 8px;
+	background: var(--surface);
+}
+details.advanced summary {
+	list-style: none;
+	cursor: pointer;
+	padding: 14px 18px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-weight: 600;
+	font-size: 13.5px;
+}
+details.advanced summary::-webkit-details-marker {
+	display: none;
+}
+details.advanced summary .chev {
+	transition: transform 0.15s ease;
+	color: var(--ink-faint);
+	font-family: var(--font-mono), monospace;
+}
+details.advanced[open] summary .chev {
+	transform: rotate(90deg);
+}
+details.advanced .form-section-body {
+	padding: 0 18px 18px;
+}
+.depth-note {
+	display: grid;
+	grid-template-columns: 1fr 160px;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+.depth-note textarea {
+	grid-column: 1 / -1;
+}
+.depth-note select {
+	border: 1px solid var(--rule);
+	border-radius: 5px;
+	padding: 8px 10px;
+	background: var(--paper);
+	color: var(--ink);
+	font-family: inherit;
+	font-size: 13px;
+}
+
+.savebar {
+	position: sticky;
+	bottom: 0;
+	background: var(--surface);
+	border-top: 1px solid var(--rule);
+	padding: 14px 28px;
+	margin: 0 -28px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	box-shadow: 0 -6px 20px -8px rgba(32, 38, 31, 0.12);
+}
+.savebar .status {
+	font-size: 12px;
+	color: var(--ink-faint);
+	margin-left: auto;
+}
+.savebar .status.dirty {
+	color: var(--rust);
 }
 
 /* ---------- signature status "stamp" ---------- */
@@ -729,6 +1028,10 @@ td.date {
 	gap: 24px;
 	align-items: start;
 }
+.wizard-preview-sticky {
+	position: sticky;
+	top: 90px;
+}
 .preview-card {
 	background: var(--paper);
 	border: 1px solid var(--rule);
@@ -870,5 +1173,125 @@ td.date {
 	.grid-2,
 	.wizard-grid {
 		grid-template-columns: 1fr;
+	}
+	.wizard-preview-sticky {
+		position: static;
+	}
+
+	/* off-canvas sidebar */
+	.sidebar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		z-index: 40;
+		transform: translateX(-100%);
+		transition: transform 0.2s ease;
+		box-shadow: 12px 0 32px -12px rgba(0, 0, 0, 0.3);
+	}
+	.sidebar.open {
+		transform: translateX(0);
+	}
+	.sidebar-backdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		background: rgba(20, 22, 17, 0.4);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.2s ease;
+		z-index: 39;
+	}
+	.sidebar-backdrop.show {
+		opacity: 1;
+		pointer-events: auto;
+	}
+	.menu-btn {
+		display: inline-flex;
+	}
+
+	.topbar {
+		padding: 14px 16px;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+	.topbar h1 {
+		font-size: 17px;
+	}
+	.content {
+		padding: 16px 16px 40px;
+	}
+	.search {
+		min-width: 0;
+		flex: 1 1 160px;
+	}
+	.toolbar {
+		flex-wrap: wrap;
+		row-gap: 10px;
+	}
+
+	/* profile / review forms collapse to one column */
+	.field-grid-2 {
+		grid-template-columns: 1fr;
+	}
+	.import-card {
+		flex-wrap: wrap;
+	}
+	.import-card .btn {
+		flex: 1 1 100%;
+		justify-content: center;
+	}
+	.row-item,
+	.row-item.cols-2 {
+		grid-template-columns: 1fr;
+	}
+	.row-item button {
+		justify-self: flex-start;
+	}
+	.depth-note {
+		grid-template-columns: 1fr;
+	}
+	.exp-row {
+		flex-direction: column;
+		gap: 0;
+	}
+	.skill-row {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	.skill-label-input {
+		width: 100%;
+	}
+	.savebar {
+		margin: 0 -16px;
+		padding: 14px 16px;
+		flex-wrap: wrap;
+	}
+	.savebar .status {
+		margin-left: 0;
+		width: 100%;
+		order: 3;
+	}
+}
+
+@media (max-width: 520px) {
+	.kpi-row {
+		grid-template-columns: 1fr 1fr;
+		gap: 10px;
+	}
+	.kpi {
+		padding: 12px 14px;
+	}
+	.kpi .value {
+		font-size: 22px;
+	}
+	.stepper .lbl {
+		display: none;
+	}
+	.stepper .step.active .lbl {
+		display: inline;
+	}
+	.step-line {
+		margin: 0 4px;
+		min-width: 8px;
 	}
 }

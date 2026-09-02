@@ -92,7 +92,7 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 						{t.candidatures.list}
 					</button>
 				</div>
-				<div className='search' style={{ minWidth: 240 }}>
+				<div className='search'>
 					⌕
 					<input
 						value={query}
