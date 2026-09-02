@@ -276,6 +276,9 @@ a {
 	color: var(--ink-soft);
 	margin-top: 2px;
 }
+.import-card .btn {
+	flex: none;
+}
 
 .form-section {
 	margin-bottom: 34px;
@@ -1229,6 +1232,13 @@ td.date {
 	/* profile / review forms collapse to one column */
 	.field-grid-2 {
 		grid-template-columns: 1fr;
+	}
+	.import-card {
+		flex-wrap: wrap;
+	}
+	.import-card .btn {
+		flex: 1 1 100%;
+		justify-content: center;
 	}
 	.row-item,
 	.row-item.cols-2 {
