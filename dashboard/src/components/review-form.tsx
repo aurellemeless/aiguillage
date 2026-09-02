@@ -1,124 +1,19 @@
 'use client';
 
-import { CoverLetterContent, CvContent, ExperienceBlock, ProposedContent, SkillLine } from '@/lib/types';
+import { CoverLetterContent, CvContent, ProposedContent } from '@/lib/types';
 import { useLocale } from '@/lib/locale-context';
 import { Dict } from '@/lib/i18n';
+import { SkillsEditor, ExperienceEditor } from '@/components/list-editors';
 
 interface ReviewFormProps {
 	content: ProposedContent;
 	onChange: (content: ProposedContent) => void;
 	generateCoverLetter: boolean;
 	onToggleGenerateCoverLetter: (value: boolean) => void;
-}
-
-function ExperienceEditor({
-	title,
-	items,
-	onChange,
-	t,
-}: {
-	title: string;
-	items: ExperienceBlock[];
-	onChange: (items: ExperienceBlock[]) => void;
-	t: Dict;
-}) {
-	function updateItem(index: number, patch: Partial<ExperienceBlock>) {
-		const next = items.map((item, i) => (i === index ? { ...item, ...patch } : item));
-		onChange(next);
-	}
-
-	return (
-		<div style={{ marginBottom: 22 }}>
-			<h3 style={{ fontSize: 14, marginBottom: 12 }}>{title}</h3>
-			{items.map((item, index) => (
-				<div key={index} style={{ border: '1px solid var(--rule)', borderRadius: 6, padding: 14, marginBottom: 12 }}>
-					<div style={{ display: 'flex', gap: 12 }}>
-						<div className='field' style={{ flex: 1 }}>
-							<label>{t.reviewForm.company}</label>
-							<input value={item.company} onChange={(e) => updateItem(index, { company: e.target.value })} />
-						</div>
-						<div className='field' style={{ flex: 1 }}>
-							<label>{t.reviewForm.dates}</label>
-							<input value={item.dates} onChange={(e) => updateItem(index, { dates: e.target.value })} />
-						</div>
-					</div>
-					<div className='field'>
-						<label>{t.reviewForm.role}</label>
-						<input value={item.role} onChange={(e) => updateItem(index, { role: e.target.value })} />
-					</div>
-					<div className='field'>
-						<label>{t.reviewForm.bullets}</label>
-						<textarea
-							rows={4}
-							value={item.bullets.join('\n')}
-							onChange={(e) => updateItem(index, { bullets: e.target.value.split('\n').filter(Boolean) })}
-						/>
-					</div>
-					<div className='field' style={{ marginBottom: 0 }}>
-						<label>{t.reviewForm.tech}</label>
-						<input
-							value={item.tech.join(', ')}
-							onChange={(e) =>
-								updateItem(index, {
-									tech: e.target.value
-										.split(',')
-										.map((v) => v.trim())
-										.filter(Boolean),
-								})
-							}
-						/>
-					</div>
-				</div>
-			))}
-		</div>
-	);
-}
-
-function SkillsEditor({ skills, onChange, t }: { skills: SkillLine[]; onChange: (skills: SkillLine[]) => void; t: Dict }) {
-	function updateSkill(index: number, patch: Partial<SkillLine>) {
-		onChange(skills.map((s, i) => (i === index ? { ...s, ...patch } : s)));
-	}
-
-	return (
-		<div style={{ marginBottom: 22 }}>
-			<h3 style={{ fontSize: 14, marginBottom: 12 }}>{t.reviewForm.skills}</h3>
-			{skills.map((skill, index) => (
-				<div key={index} style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
-					<input
-						style={{
-							width: 160,
-							border: '1px solid var(--rule)',
-							borderRadius: 5,
-							padding: '9px 11px',
-							background: 'var(--paper)',
-							color: 'var(--ink)',
-						}}
-						value={skill.label}
-						onChange={(e) => updateSkill(index, { label: e.target.value })}
-					/>
-					<input
-						style={{
-							flex: 1,
-							border: '1px solid var(--rule)',
-							borderRadius: 5,
-							padding: '9px 11px',
-							background: 'var(--paper)',
-							color: 'var(--ink)',
-						}}
-						value={skill.values.join(', ')}
-						onChange={(e) =>
-							updateSkill(index, {
-								values: e.target.value
-									.split(',')
-									.map((v) => v.trim())
-									.filter(Boolean),
-							})
-						}
-					/>
-				</div>
-			))}
-		</div>
-	);
+	primaryLanguageLabel: string;
+	secondaryLanguageLabel: string;
+	secondaryLanguageChecked: boolean;
+	onToggleSecondaryLanguage: (value: boolean) => void;
 }
 
 function CvEditor({ cv, onChange, t }: { cv: CvContent; onChange: (cv: CvContent) => void; t: Dict }) {
@@ -198,6 +93,10 @@ export default function ReviewForm({
 	onChange,
 	generateCoverLetter,
 	onToggleGenerateCoverLetter,
+	primaryLanguageLabel,
+	secondaryLanguageLabel,
+	secondaryLanguageChecked,
+	onToggleSecondaryLanguage,
 }: ReviewFormProps) {
 	const { t } = useLocale();
 	return (
@@ -213,7 +112,26 @@ export default function ReviewForm({
 				</div>
 			</div>
 			<CvEditor cv={content.cv} onChange={(cv) => onChange({ ...content, cv })} t={t} />
-			<label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, margin: '18px 0' }}>
+			<div style={{ margin: '18px 0' }}>
+				<div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--ink-soft)', fontWeight: 600, marginBottom: 8 }}>
+					{t.reviewForm.languagesToGenerate}
+				</div>
+				<div style={{ display: 'flex', gap: 16 }}>
+					<label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5 }}>
+						<input type='checkbox' checked disabled />
+						{primaryLanguageLabel}
+					</label>
+					<label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5 }}>
+						<input
+							type='checkbox'
+							checked={secondaryLanguageChecked}
+							onChange={(e) => onToggleSecondaryLanguage(e.target.checked)}
+						/>
+						{secondaryLanguageLabel}
+					</label>
+				</div>
+			</div>
+			<label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, marginBottom: 18 }}>
 				<input
 					type='checkbox'
 					checked={generateCoverLetter}

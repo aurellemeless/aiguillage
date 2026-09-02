@@ -40,9 +40,12 @@ reuse it, adapt it, or take inspiration from it with their own profile.
   history, free-form notes.
 - CLI tracking (`tracker/tracker_cli.py`) alongside the dashboard.
 - French/English interface switch, also used as the generation language for
-  the CV and cover letter.
-- Profile setup from an existing CV (PDF or DOCX): upload it, review the
-  extracted data, and save it as `profile/profile.json`.
+  the CV and cover letter — with an option to generate both languages at
+  once (two separate files per document).
+- Profile editor with a proper form (identity, skills, experience,
+  education, certifications, languages, personal projects) instead of raw
+  JSON — pre-filled from `profile/profile.json`, and can also be filled in
+  by importing an existing CV (PDF or DOCX).
 - Excel export of all applications and their full status-change history, for
   analysis outside the app.
 - QR code printed in the terminal when the dev server is ready, to open the

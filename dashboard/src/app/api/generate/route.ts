@@ -21,6 +21,8 @@ interface GenerateRequestBody {
 	cv: CvContent;
 	coverLetter?: CoverLetterContent;
 	language?: string;
+	subdir?: string;
+	skipRecord?: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -30,16 +32,25 @@ export async function POST(req: NextRequest) {
 		return NextResponse.json({ error: 'Entreprise et poste sont requis.' }, { status: 400 });
 	}
 
-	const subdir = applicationSlug(body.company, body.role);
+	const subdir = body.subdir || applicationSlug(body.company, body.role);
 	const candidateSlug = candidateNameSlug();
 	const language = parseLocale(body.language);
+	const letterPrefix = language === 'en' ? 'Cover_Letter' : 'Lettre';
 
 	try {
-		const cvResult = await generateCv(body.cv, `CV_${candidateSlug}_${subdir}.docx`, subdir, language);
+		const cvResult = await generateCv(body.cv, `CV_${candidateSlug}_${language}_${subdir}.docx`, subdir, language);
 
 		const letterResult = body.coverLetter
-			? await generateCoverLetter(body.coverLetter, `Lettre_${candidateSlug}_${subdir}.docx`, subdir, language)
+			? await generateCoverLetter(body.coverLetter, `${letterPrefix}_${candidateSlug}_${language}_${subdir}.docx`, subdir, language)
 			: null;
+
+		if (body.skipRecord) {
+			return NextResponse.json({
+				subdir,
+				cvPath: cvResult.path,
+				coverLetterPath: letterResult?.path ?? null,
+			});
+		}
 
 		const applicationId = insertApplication({
 			company: body.company,
@@ -52,6 +63,7 @@ export async function POST(req: NextRequest) {
 
 		return NextResponse.json({
 			applicationId,
+			subdir,
 			cvPath: cvResult.path,
 			coverLetterPath: letterResult?.path ?? null,
 		});

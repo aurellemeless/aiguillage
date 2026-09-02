@@ -1,47 +1,50 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '@/lib/locale-context';
+import { SkillsEditor, ExperienceEditor } from '@/components/list-editors';
+import { IdentityEditor, RowListEditor, PersonalProjectsEditor, DepthNotesEditor } from '@/components/profile-editors';
+import { ProfileData, ProfileCertification, ProfileEducation, ProfileLanguage, linesToSkills, normalizeProfile, skillsToLines } from '@/lib/profile-types';
 
-type Step = 'upload' | 'analyse' | 'relecture' | 'termine';
-
-function tryParseIdentity(json: string): { name?: string; title?: string } | null {
-	try {
-		const parsed = JSON.parse(json);
-		return parsed?.identity ?? {};
-	} catch {
-		return null;
-	}
+function clone(profile: ProfileData): ProfileData {
+	return JSON.parse(JSON.stringify(profile));
 }
 
 export default function ProfilePage() {
-	const router = useRouter();
 	const { locale, t } = useLocale();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	const [step, setStep] = useState<Step>('upload');
-	const [file, setFile] = useState<File | null>(null);
-	const [profileText, setProfileText] = useState('');
-	const [jsonError, setJsonError] = useState<string | null>(null);
+	const [profile, setProfile] = useState<ProfileData | null>(null);
+	const [savedSnapshot, setSavedSnapshot] = useState<ProfileData | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [saving, setSaving] = useState(false);
+	const [importing, setImporting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [existingProfile, setExistingProfile] = useState(false);
+	const [status, setStatus] = useState<string | null>(null);
 
-	const STEPS: { key: Step; label: string }[] = [
-		{ key: 'upload', label: t.profile.stepUpload },
-		{ key: 'analyse', label: t.profile.stepAnalysis },
-		{ key: 'relecture', label: t.profile.stepReview },
-		{ key: 'termine', label: t.profile.stepDone },
-	];
-	const currentIndex = STEPS.findIndex((s) => s.key === step);
+	useEffect(() => {
+		fetch('/api/profile')
+			.then((res) => res.json())
+			.then((data) => {
+				const normalized = normalizeProfile(data.profile);
+				setProfile(normalized);
+				setSavedSnapshot(clone(normalized));
+			})
+			.catch(() => setError(t.profile.loadFailed))
+			.finally(() => setLoading(false));
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
-	async function handleAnalyze() {
-		if (!file) {
-			setError(t.profile.noFileError);
-			return;
-		}
+	const dirty = profile && savedSnapshot ? JSON.stringify(profile) !== JSON.stringify(savedSnapshot) : false;
+
+	function update(patch: Partial<ProfileData>) {
+		setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
+	}
+
+	async function handleImport(file: File) {
 		setError(null);
-		setStep('analyse');
+		setImporting(true);
+		setStatus(t.profile.analyzing);
 		try {
 			const formData = new FormData();
 			formData.append('file', file);
@@ -49,54 +52,58 @@ export default function ProfilePage() {
 			const res = await fetch('/api/profile/extract', { method: 'POST', body: formData });
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.profile.extractFailed);
-
-			const checkRes = await fetch('/api/profile');
-			const checkData = await checkRes.json();
-			setExistingProfile(Boolean(checkData.exists));
-
-			setProfileText(JSON.stringify(data.profile, null, 2));
-			setJsonError(null);
-			setStep('relecture');
+			setProfile(normalizeProfile(data.profile));
+			setStatus(t.profile.extracted);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
-			setStep('upload');
+			setStatus(null);
+		} finally {
+			setImporting(false);
+			if (fileInputRef.current) fileInputRef.current.value = '';
 		}
 	}
 
 	async function handleSave() {
-		let parsed: unknown;
-		try {
-			parsed = JSON.parse(profileText);
-		} catch {
-			setJsonError(t.profile.invalidJson);
-			return;
-		}
-		setJsonError(null);
+		if (!profile) return;
 		setError(null);
+		setSaving(true);
 		try {
 			const res = await fetch('/api/profile', {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(parsed),
+				body: JSON.stringify(profile),
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.profile.saveFailed);
-			setStep('termine');
+			setSavedSnapshot(clone(profile));
+			setStatus(t.profile.savedStatus);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setSaving(false);
 		}
 	}
 
-	function reset() {
-		setStep('upload');
-		setFile(null);
-		setProfileText('');
-		setJsonError(null);
+	function handleCancel() {
+		if (savedSnapshot) setProfile(clone(savedSnapshot));
+		setStatus(null);
 		setError(null);
-		if (fileInputRef.current) fileInputRef.current.value = '';
 	}
 
-	const identity = step === 'relecture' ? tryParseIdentity(profileText) : null;
+	if (loading || !profile) {
+		return (
+			<div>
+				<div className='topbar'>
+					<h1>{t.profile.title}</h1>
+				</div>
+				<div className='content'>
+					<div className='center-state'>
+						<div className='scanline' />
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div>
@@ -104,115 +111,161 @@ export default function ProfilePage() {
 				<h1>{t.profile.title}</h1>
 			</div>
 			<div className='content'>
-				<div className='stepper'>
-					{STEPS.map((s, i) => (
-						<div key={s.key} style={{ display: 'contents' }}>
-							<div className={`step ${i < currentIndex ? 'done' : i === currentIndex ? 'active' : ''}`}>
-								<span className='num'>{i < currentIndex ? '✓' : i + 1}</span>
-								<span className='lbl'>{s.label}</span>
-							</div>
-							{i < STEPS.length - 1 && <div className={`step-line ${i < currentIndex ? 'done' : ''}`} />}
-						</div>
-					))}
-				</div>
 				{error && <div className='error-box'>{error}</div>}
+				<p className='note' style={{ marginBottom: 18 }}>
+					{t.profile.intro}
+				</p>
 
-				{step === 'upload' && (
-					<div style={{ maxWidth: 560 }}>
-						<p className='note' style={{ marginBottom: 18 }}>
-							{t.profile.intro}
-						</p>
-						<div className='field'>
-							<label>{t.profile.uploadLabel}</label>
-							<input
-								ref={fileInputRef}
-								type='file'
-								accept='.pdf,.docx'
-								onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-								style={{ display: 'none' }}
-							/>
-							<div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-								<button type='button' className='btn subtle' onClick={() => fileInputRef.current?.click()}>
-									{t.profile.chooseFile}
-								</button>
-								<span className='note'>{file ? file.name : t.profile.noFileChosen}</span>
-							</div>
-							<p className='note' style={{ marginTop: 8 }}>
-								{t.profile.fileTypeHint}
-							</p>
-						</div>
-						<p className='note'>{t.profile.existingProfileHint}</p>
-						<div className='wizard-actions'>
-							<button className='btn' onClick={handleAnalyze} disabled={!file}>
-								{t.profile.analyze}
-							</button>
+				<label className='import-card' style={{ cursor: importing ? 'default' : 'pointer' }}>
+					<div className='icon'>↑</div>
+					<div className='txt'>
+						<b>{t.profile.importTitle}</b>
+						<span>{t.profile.importHint}</span>
+					</div>
+					<input
+						ref={fileInputRef}
+						type='file'
+						accept='.pdf,.docx'
+						style={{ display: 'none' }}
+						disabled={importing}
+						onChange={(e) => {
+							const file = e.target.files?.[0];
+							if (file) handleImport(file);
+						}}
+					/>
+					<button
+						type='button'
+						className='btn subtle'
+						disabled={importing}
+						onClick={() => fileInputRef.current?.click()}
+					>
+						{importing ? '…' : t.profile.chooseFile}
+					</button>
+				</label>
+
+				<IdentityEditor identity={profile.identity} onChange={(identity) => update({ identity })} t={t} />
+
+				<div className='form-section'>
+					<div className='form-section-head'>
+						<h2>{t.reviewForm.skills}</h2>
+						<span className='hint'>{t.profileForm.skillsHint}</span>
+					</div>
+					<div className='form-section-body'>
+						<SkillsEditor
+							skills={skillsToLines(profile.skills)}
+							onChange={(lines) => update({ skills: linesToSkills(lines) })}
+							t={t}
+							addable
+							title=''
+						/>
+					</div>
+				</div>
+
+				<div className='form-section'>
+					<div className='form-section-head'>
+						<h2>{t.reviewForm.experience}</h2>
+						<span className='hint'>{t.profileForm.experienceHint}</span>
+					</div>
+					<div className='form-section-body'>
+						<ExperienceEditor
+							title=''
+							items={profile.experience}
+							onChange={(experience) => update({ experience })}
+							t={t}
+							addable
+							addLabel={t.profileForm.addExperience}
+						/>
+					</div>
+				</div>
+
+				<div className='form-section'>
+					<div className='form-section-head'>
+						<h2>{t.profileForm.education}</h2>
+					</div>
+					<div className='form-section-body'>
+						<RowListEditor<ProfileEducation>
+							items={profile.education}
+							onChange={(education) => update({ education })}
+							fields={[
+								{ key: 'degree', placeholder: t.profileForm.degree },
+								{ key: 'institution', placeholder: t.profileForm.institution },
+								{ key: 'year', placeholder: t.profileForm.year },
+							]}
+							addLabel={t.profileForm.addEducation}
+						/>
+					</div>
+				</div>
+
+				<div className='form-section'>
+					<div className='form-section-head'>
+						<h2>{t.profileForm.certifications}</h2>
+					</div>
+					<div className='form-section-body'>
+						<RowListEditor<ProfileCertification>
+							items={profile.certifications}
+							onChange={(certifications) => update({ certifications })}
+							fields={[
+								{ key: 'name', placeholder: t.profileForm.certName },
+								{ key: 'organization', placeholder: t.profileForm.organization },
+								{ key: 'year', placeholder: t.profileForm.year },
+							]}
+							addLabel={t.profileForm.addCertification}
+						/>
+					</div>
+				</div>
+
+				<div className='form-section'>
+					<div className='form-section-head'>
+						<h2>{t.profileForm.languages}</h2>
+					</div>
+					<div className='form-section-body'>
+						<RowListEditor<ProfileLanguage>
+							items={profile.languages}
+							onChange={(languages) => update({ languages })}
+							fields={[
+								{ key: 'language', placeholder: t.profileForm.language },
+								{ key: 'level', placeholder: t.profileForm.level },
+							]}
+							addLabel={t.profileForm.addLanguage}
+							twoColumn
+						/>
+					</div>
+				</div>
+
+				<div className='form-section'>
+					<div className='form-section-head'>
+						<h2>{t.profileForm.drivingLicense}</h2>
+					</div>
+					<div className='form-section-body'>
+						<div className='field' style={{ maxWidth: 280, marginBottom: 0 }}>
+							<input value={profile.driving_license} onChange={(e) => update({ driving_license: e.target.value })} />
 						</div>
 					</div>
-				)}
+				</div>
 
-				{step === 'analyse' && (
-					<div className='center-state'>
-						<div className='scanline' />
-						<div>{t.profile.analyzing}</div>
-					</div>
-				)}
+				<PersonalProjectsEditor
+					items={profile.personal_projects}
+					onChange={(personal_projects) => update({ personal_projects })}
+					t={t}
+				/>
 
-				{step === 'relecture' && (
-					<div style={{ maxWidth: 760 }}>
-						{identity && (identity.name || identity.title) && (
-							<div className='panel' style={{ padding: '14px 18px', marginBottom: 16 }}>
-								<b>{identity.name}</b>
-								{identity.title ? ` — ${identity.title}` : ''}
-							</div>
-						)}
-						{existingProfile && <p className='note' style={{ marginBottom: 12 }}>{t.profile.existingProfileHint}</p>}
-						<p className='note' style={{ marginBottom: 8 }}>
-							{t.profile.reviewHint}
-						</p>
-						<div className='field'>
-							<textarea
-								className='font-mono'
-								rows={22}
-								value={profileText}
-								onChange={(e) => {
-									setProfileText(e.target.value);
-									setJsonError(null);
-								}}
-								style={{ fontSize: 12.5 }}
-							/>
-						</div>
-						{jsonError && <div className='error-box'>{jsonError}</div>}
-						<div className='wizard-actions'>
-							<button className='btn subtle' onClick={() => setStep('upload')}>
-								{t.profile.back}
-							</button>
-							<button className='btn' onClick={handleSave}>
-								{t.profile.save}
-							</button>
-						</div>
-					</div>
-				)}
+				<DepthNotesEditor
+					items={profile.skills_depth_notes}
+					onChange={(skills_depth_notes) => update({ skills_depth_notes })}
+					t={t}
+				/>
 
-				{step === 'termine' && (
-					<div>
-						<div className='center-state' style={{ paddingBottom: 24 }}>
-							<div className='done-icon'>✓</div>
-							<div>
-								<b>{t.profile.saved}</b>
-								<br />
-								<span className='note'>{t.profile.savedSub}</span>
-							</div>
-						</div>
-						<div className='wizard-actions' style={{ justifyContent: 'center' }}>
-							<button className='btn subtle' onClick={reset}>
-								{t.profile.importAnother}
-							</button>
-							<button className='btn' onClick={() => router.push('/')}>
-								{t.profile.backToDashboard}
-							</button>
-						</div>
-					</div>
-				)}
+				<div className='savebar' style={{ marginTop: 30 }}>
+					<button type='button' className='btn subtle' onClick={handleCancel} disabled={!dirty || saving}>
+						{t.profile.cancel}
+					</button>
+					<button type='button' className='btn' onClick={handleSave} disabled={saving}>
+						{t.profile.save}
+					</button>
+					<span className={`status ${dirty ? 'dirty' : ''}`}>
+						{saving ? '…' : dirty ? t.profile.unsavedChanges : status ?? ''}
+					</span>
+				</div>
 			</div>
 		</div>
 	);
