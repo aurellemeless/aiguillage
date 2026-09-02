@@ -27,29 +27,15 @@ export function SkillsEditor({
 		<div style={{ marginBottom: 22 }}>
 			{title !== '' && <h3 style={{ fontSize: 14, marginBottom: 12 }}>{title ?? t.reviewForm.skills}</h3>}
 			{skills.map((skill, index) => (
-				<div key={index} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'center' }}>
+				<div key={index} className='skill-row'>
 					<input
-						style={{
-							width: 160,
-							border: '1px solid var(--rule)',
-							borderRadius: 5,
-							padding: '9px 11px',
-							background: 'var(--paper)',
-							color: 'var(--ink)',
-						}}
+						className='skill-label-input'
 						placeholder={addable ? t.profileForm.category : undefined}
 						value={skill.label}
 						onChange={(e) => updateSkill(index, { label: e.target.value })}
 					/>
 					<input
-						style={{
-							flex: 1,
-							border: '1px solid var(--rule)',
-							borderRadius: 5,
-							padding: '9px 11px',
-							background: 'var(--paper)',
-							color: 'var(--ink)',
-						}}
+						className='skill-values-input'
 						value={skill.values.join(', ')}
 						onChange={(e) =>
 							updateSkill(index, {
@@ -108,7 +94,7 @@ export function ExperienceEditor({
 							{t.profileForm.remove}
 						</button>
 					)}
-					<div style={{ display: 'flex', gap: 12 }}>
+					<div className='exp-row'>
 						<div className='field' style={{ flex: 1 }}>
 							<label>{t.reviewForm.company}</label>
 							<input value={item.company} onChange={(e) => updateItem(index, { company: e.target.value })} />

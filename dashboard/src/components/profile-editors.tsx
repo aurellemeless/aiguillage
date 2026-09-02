@@ -147,7 +147,7 @@ export function PersonalProjectsEditor({
 						<button type='button' className='btn danger-ghost remove' onClick={() => remove(index)}>
 							{t.profileForm.remove}
 						</button>
-						<div style={{ display: 'flex', gap: 12 }}>
+						<div className='exp-row'>
 							<div className='field' style={{ flex: 1 }}>
 								<label>{t.profileForm.projectName}</label>
 								<input value={item.name} onChange={(e) => update(index, { name: e.target.value })} />

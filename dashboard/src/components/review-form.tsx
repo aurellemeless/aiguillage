@@ -101,7 +101,7 @@ export default function ReviewForm({
 	const { t } = useLocale();
 	return (
 		<div>
-			<div style={{ display: 'flex', gap: 16 }}>
+			<div className='exp-row'>
 				<div className='field' style={{ flex: 1 }}>
 					<label>{t.reviewForm.company}</label>
 					<input value={content.company} onChange={(e) => onChange({ ...content, company: e.target.value })} />

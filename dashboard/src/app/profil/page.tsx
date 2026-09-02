@@ -5,6 +5,7 @@ import { useLocale } from '@/lib/locale-context';
 import { SkillsEditor, ExperienceEditor } from '@/components/list-editors';
 import { IdentityEditor, RowListEditor, PersonalProjectsEditor, DepthNotesEditor } from '@/components/profile-editors';
 import { ProfileData, ProfileCertification, ProfileEducation, ProfileLanguage, linesToSkills, normalizeProfile, skillsToLines } from '@/lib/profile-types';
+import MenuButton from '@/components/menu-button';
 
 function clone(profile: ProfileData): ProfileData {
 	return JSON.parse(JSON.stringify(profile));
@@ -94,6 +95,7 @@ export default function ProfilePage() {
 		return (
 			<div>
 				<div className='topbar'>
+					<MenuButton />
 					<h1>{t.profile.title}</h1>
 				</div>
 				<div className='content'>
@@ -108,6 +110,7 @@ export default function ProfilePage() {
 	return (
 		<div>
 			<div className='topbar'>
+				<MenuButton />
 				<h1>{t.profile.title}</h1>
 			</div>
 			<div className='content'>

@@ -8,6 +8,7 @@ import CopyablePath from '@/components/copyable-path';
 import { ProposedContent } from '@/lib/types';
 import { Locale } from '@/lib/i18n';
 import { useLocale } from '@/lib/locale-context';
+import MenuButton from '@/components/menu-button';
 
 type Step = 'offre' | 'analyse' | 'relecture' | 'generation' | 'termine';
 
@@ -132,6 +133,7 @@ export default function NouvelleCandidaturePage() {
 	return (
 		<div>
 			<div className='topbar'>
+				<MenuButton />
 				<h1>{t.wizard.title}</h1>
 			</div>
 			<div className='content'>
@@ -188,7 +190,7 @@ export default function NouvelleCandidaturePage() {
 								onToggleSecondaryLanguage={setAlsoOtherLanguage}
 							/>
 						</div>
-						<div style={{ position: 'sticky', top: 90 }}>
+						<div className='wizard-preview-sticky'>
 							<CvPreview content={content} />
 						</div>
 					</div>
