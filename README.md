@@ -45,6 +45,8 @@ reuse it, adapt it, or take inspiration from it with their own profile.
   extracted data, and save it as `profile/profile.json`.
 - Excel export of all applications and their full status-change history, for
   analysis outside the app.
+- QR code printed in the terminal when the dev server is ready, to open the
+  board straight from your phone.
 
 ## Requirements
 
@@ -98,6 +100,10 @@ reuse it, adapt it, or take inspiration from it with their own profile.
 
 Starts the CV generation service (port 8000) then the dashboard
 (`http://localhost:3000`).
+
+The dashboard's dev server also prints a QR code in the terminal once it's
+ready, linking straight to the Candidatures board on your phone (same
+Wi-Fi).
 
 ## Tracking applications from the CLI
 
