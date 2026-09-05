@@ -48,6 +48,7 @@ export interface Application {
 	cv_file_path: string | null;
 	cover_letter_file_path: string | null;
 	cv_version: number;
+	profile_slug: string;
 }
 
 export const STATUSES = [

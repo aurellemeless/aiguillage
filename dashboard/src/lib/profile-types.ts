@@ -44,6 +44,7 @@ export interface ProfilePersonalProject {
 }
 
 export interface ProfileData {
+	profile_label?: string;
 	identity: ProfileIdentity;
 	skills: Record<string, string[]>;
 	skills_depth_notes: ProfileDepthNote[];

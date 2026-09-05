@@ -1,7 +1,9 @@
+import { redirect } from 'next/navigation';
 import NextLink from 'next/link';
 import { listJobs, WizardJobRow } from '@/lib/db';
 import { getDict } from '@/lib/i18n';
 import { getServerLocale } from '@/lib/server-locale';
+import { getServerProfileSlug } from '@/lib/server-profile';
 import { formatDateTime } from '@/lib/status';
 import { ProposedContent } from '@/lib/types';
 import MenuButton from '@/components/menu-button';
@@ -21,7 +23,9 @@ function jobTitle(job: WizardJobRow, fallback: string): { company: string; role:
 export default async function TachesPage() {
 	const locale = await getServerLocale();
 	const t = getDict(locale);
-	const jobs = listJobs();
+	const profileSlug = await getServerProfileSlug();
+	if (!profileSlug) redirect('/profil');
+	const jobs = listJobs(profileSlug);
 
 	return (
 		<div>

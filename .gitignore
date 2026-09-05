@@ -9,3 +9,5 @@ data/*.db
 data/generated/
 data/tmp/
 profile/profile.json
+profile/profiles/
+profile/default-profile.json

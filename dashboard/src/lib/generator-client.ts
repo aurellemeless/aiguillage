@@ -1,5 +1,6 @@
 import { CoverLetterContent, CvContent } from './types';
 import { Locale } from './i18n';
+import { ProfileData } from './profile-types';
 
 const GENERATOR_BASE_URL = process.env.CV_GENERATOR_URL ?? 'http://localhost:8000';
 
@@ -17,21 +18,23 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 export function generateCv(
+	profile: ProfileData,
 	content: CvContent,
 	outputName: string,
 	subdir: string,
 	language: Locale = 'fr'
 ): Promise<{ path: string }> {
-	return postJson('/generate-cv', { ...content, output_name: outputName, subdir, language });
+	return postJson('/generate-cv', { ...content, profile, output_name: outputName, subdir, language });
 }
 
 export function generateCoverLetter(
+	profile: ProfileData,
 	content: CoverLetterContent,
 	outputName: string,
 	subdir: string,
 	language: Locale = 'fr'
 ): Promise<{ path: string }> {
-	return postJson('/generate-cover-letter', { ...content, output_name: outputName, subdir, language });
+	return postJson('/generate-cover-letter', { ...content, profile, output_name: outputName, subdir, language });
 }
 
 export async function extractDocxText(buffer: Buffer, filename: string): Promise<string> {

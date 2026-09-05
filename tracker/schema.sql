@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS applications (
     recruiter_contact TEXT,
     cv_file_path TEXT,
     cover_letter_file_path TEXT,
-    cv_version INTEGER NOT NULL DEFAULT 1
+    cv_version INTEGER NOT NULL DEFAULT 1,
+    profile_slug TEXT NOT NULL DEFAULT 'default'
 );
 
 CREATE TABLE IF NOT EXISTS status_history (
@@ -35,5 +36,6 @@ CREATE TABLE IF NOT EXISTS wizard_jobs (
     error_message TEXT,
     application_id INTEGER REFERENCES applications(id),
     cv_path TEXT,
-    cover_letter_path TEXT
+    cover_letter_path TEXT,
+    profile_slug TEXT NOT NULL DEFAULT 'default'
 );

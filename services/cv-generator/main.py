@@ -1,6 +1,4 @@
 import io
-import json
-from pathlib import Path
 from typing import Optional
 
 from docx import Document as DocxDocument
@@ -12,12 +10,6 @@ import generator
 PROFILE_PATH = Path(__file__).resolve().parent.parent.parent / "profile" / "profile.json"
 
 app = FastAPI(title="CV Generator", version="1.1.0")
-
-
-def load_profile() -> dict:
-    if not PROFILE_PATH.exists():
-        raise HTTPException(status_code=500, detail=f"Profil introuvable : {PROFILE_PATH}")
-    return json.loads(PROFILE_PATH.read_text())
 
 
 class SkillLine(BaseModel):
@@ -34,6 +26,7 @@ class Experience(BaseModel):
 
 
 class GenerateCVRequest(BaseModel):
+    profile: dict
     output_name: str
     subdir: Optional[str] = None
     language: str = "fr"
@@ -46,6 +39,7 @@ class GenerateCVRequest(BaseModel):
 
 
 class GenerateCoverLetterRequest(BaseModel):
+    profile: dict
     output_name: str
     subdir: Optional[str] = None
     language: str = "fr"
@@ -61,18 +55,16 @@ def health():
 
 @app.post("/generate-cv")
 def generate_cv(payload: GenerateCVRequest):
-    profile = load_profile()
-    content = payload.model_dump(exclude={"output_name", "subdir", "language"})
-    doc = generator.build_cv(profile, content, payload.language)
+    content = payload.model_dump(exclude={"profile", "output_name", "subdir", "language"})
+    doc = generator.build_cv(payload.profile, content, payload.language)
     path = generator.save_document(doc, payload.output_name, payload.subdir or "")
     return {"path": str(path)}
 
 
 @app.post("/generate-cover-letter")
 def generate_cover_letter(payload: GenerateCoverLetterRequest):
-    profile = load_profile()
-    content = payload.model_dump(exclude={"output_name", "subdir", "language"})
-    doc = generator.build_cover_letter(profile, content, payload.language)
+    content = payload.model_dump(exclude={"profile", "output_name", "subdir", "language"})
+    doc = generator.build_cover_letter(payload.profile, content, payload.language)
     path = generator.save_document(doc, payload.output_name, payload.subdir or "")
     return {"path": str(path)}
 

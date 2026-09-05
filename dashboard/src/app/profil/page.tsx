@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLocale } from '@/lib/locale-context';
+import { useProfile } from '@/lib/profile-context';
 import { SkillsEditor, ExperienceEditor } from '@/components/list-editors';
 import { IdentityEditor, RowListEditor, PersonalProjectsEditor, DepthNotesEditor } from '@/components/profile-editors';
 import { ProfileData, ProfileCertification, ProfileEducation, ProfileLanguage, linesToSkills, normalizeProfile, skillsToLines } from '@/lib/profile-types';
@@ -13,7 +15,10 @@ function clone(profile: ProfileData): ProfileData {
 
 export default function ProfilePage() {
 	const { locale, t } = useLocale();
+	const { profileSlug, profiles, setProfileSlug } = useProfile();
+	const router = useRouter();
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [settingDefault, setSettingDefault] = useState(false);
 
 	const [profile, setProfile] = useState<ProfileData | null>(null);
 	const [savedSnapshot, setSavedSnapshot] = useState<ProfileData | null>(null);
@@ -22,9 +27,16 @@ export default function ProfilePage() {
 	const [importing, setImporting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [status, setStatus] = useState<string | null>(null);
+	const [creatingProfile, setCreatingProfile] = useState(false);
+	const [newProfileLabel, setNewProfileLabel] = useState('');
 
 	useEffect(() => {
-		fetch('/api/profile')
+		if (!profileSlug) {
+			setLoading(false);
+			return;
+		}
+		setLoading(true);
+		fetch(`/api/profiles/${profileSlug}`)
 			.then((res) => res.json())
 			.then((data) => {
 				const normalized = normalizeProfile(data.profile);
@@ -34,7 +46,7 @@ export default function ProfilePage() {
 			.catch(() => setError(t.profile.loadFailed))
 			.finally(() => setLoading(false));
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [profileSlug]);
 
 	const dirty = profile && savedSnapshot ? JSON.stringify(profile) !== JSON.stringify(savedSnapshot) : false;
 
@@ -50,10 +62,10 @@ export default function ProfilePage() {
 			const formData = new FormData();
 			formData.append('file', file);
 			formData.append('language', locale);
-			const res = await fetch('/api/profile/extract', { method: 'POST', body: formData });
+			const res = await fetch('/api/profiles/extract', { method: 'POST', body: formData });
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.profile.extractFailed);
-			setProfile(normalizeProfile(data.profile));
+			setProfile((prev) => normalizeProfile({ ...prev, ...data.profile }));
 			setStatus(t.profile.extracted);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
@@ -65,11 +77,11 @@ export default function ProfilePage() {
 	}
 
 	async function handleSave() {
-		if (!profile) return;
+		if (!profile || !profileSlug) return;
 		setError(null);
 		setSaving(true);
 		try {
-			const res = await fetch('/api/profile', {
+			const res = await fetch(`/api/profiles/${profileSlug}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(profile),
@@ -89,6 +101,106 @@ export default function ProfilePage() {
 		if (savedSnapshot) setProfile(clone(savedSnapshot));
 		setStatus(null);
 		setError(null);
+	}
+
+	async function handleCreateProfile() {
+		if (!newProfileLabel.trim()) return;
+		setError(null);
+		try {
+			const res = await fetch('/api/profiles', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ label: newProfileLabel.trim() }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? t.profile.createFailed);
+			setNewProfileLabel('');
+			setCreatingProfile(false);
+			setProfileSlug(data.slug, '/profil');
+		} catch (err) {
+			setError(err instanceof Error ? err.message : String(err));
+		}
+	}
+
+	const activeProfileSummary = profiles.find((p) => p.slug === profileSlug);
+
+	async function handleSetDefault() {
+		if (!profileSlug) return;
+		setSettingDefault(true);
+		setError(null);
+		try {
+			const res = await fetch(`/api/profiles/${profileSlug}/default`, { method: 'PUT' });
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error);
+			router.refresh();
+		} catch (err) {
+			setError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setSettingDefault(false);
+		}
+	}
+
+	const newProfileForm = creatingProfile && (
+		<div className='card-item' style={{ marginBottom: 18 }}>
+			<div className='field' style={{ marginBottom: 10 }}>
+				<label>{t.profile.newProfileLabel}</label>
+				<input
+					value={newProfileLabel}
+					onChange={(e) => setNewProfileLabel(e.target.value)}
+					placeholder={t.profile.newProfilePlaceholder}
+					autoFocus
+				/>
+			</div>
+			<div className='wizard-actions' style={{ justifyContent: 'flex-start' }}>
+				<button type='button' className='btn subtle' onClick={() => setCreatingProfile(false)}>
+					{t.wizard.back}
+				</button>
+				<button type='button' className='btn' onClick={handleCreateProfile} disabled={!newProfileLabel.trim()}>
+					{t.profile.createProfile}
+				</button>
+			</div>
+		</div>
+	);
+
+	if (profiles.length === 0 && !creatingProfile) {
+		return (
+			<div>
+				<div className='topbar'>
+					<MenuButton />
+					<h1>{t.profile.title}</h1>
+				</div>
+				<div className='content'>
+					{error && <div className='error-box'>{error}</div>}
+					<div className='center-state' style={{ paddingBottom: 24 }}>
+						<div>
+							<b>{t.profile.noProfiles}</b>
+							<br />
+							<span className='note'>{t.profile.noProfilesSub}</span>
+						</div>
+					</div>
+					<div style={{ maxWidth: 420, margin: '0 auto' }}>
+						<button type='button' className='btn' style={{ width: '100%' }} onClick={() => setCreatingProfile(true)}>
+							{t.profile.newProfile}
+						</button>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	if (creatingProfile) {
+		return (
+			<div>
+				<div className='topbar'>
+					<MenuButton />
+					<h1>{t.profile.title}</h1>
+				</div>
+				<div className='content'>
+					{error && <div className='error-box'>{error}</div>}
+					<div style={{ maxWidth: 420 }}>{newProfileForm}</div>
+				</div>
+			</div>
+		);
 	}
 
 	if (loading || !profile) {
@@ -118,6 +230,34 @@ export default function ProfilePage() {
 				<p className='note' style={{ marginBottom: 18 }}>
 					{t.profile.intro}
 				</p>
+
+				<div className='form-section'>
+					<div className='form-section-head'>
+						<h2>{t.profile.newProfileLabel}</h2>
+					</div>
+					<div className='form-section-body'>
+						<div className='exp-row'>
+							<div className='field' style={{ flex: 1 }}>
+								<input
+									value={profile.profile_label ?? ''}
+									onChange={(e) => update({ profile_label: e.target.value })}
+									placeholder={t.profile.newProfilePlaceholder}
+								/>
+							</div>
+							<button
+								type='button'
+								className='btn subtle'
+								onClick={handleSetDefault}
+								disabled={settingDefault || activeProfileSummary?.isDefault}
+							>
+								{activeProfileSummary?.isDefault ? t.profile.isDefault : t.profile.setAsDefault}
+							</button>
+							<button type='button' className='btn subtle' onClick={() => setCreatingProfile(true)}>
+								{t.profile.newProfile}
+							</button>
+						</div>
+					</div>
+				</div>
 
 				<label className='import-card' style={{ cursor: importing ? 'default' : 'pointer' }}>
 					<div className='icon'>↑</div>

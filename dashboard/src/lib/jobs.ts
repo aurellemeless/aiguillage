@@ -1,38 +1,38 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { getJob, insertApplication, updateJob } from './db';
+import { getProfile } from './profiles';
 import { analyzeOffer } from './claude';
 import { generateCoverLetter as generateCoverLetterDocx, generateCv as generateCvDocx } from './generator-client';
 import { applicationSlug, slugify } from './followup';
 import { Locale, parseLocale } from './i18n';
+import { ProfileData } from './profile-types';
 import { ProposedContent } from './types';
 
-const PROFILE_PATH = path.join(process.cwd(), '..', 'profile', 'profile.json');
-
-function readProfile(): object {
-	return JSON.parse(fs.readFileSync(PROFILE_PATH, 'utf-8'));
-}
-
-function candidateNameSlug(): string {
-	const profile = readProfile() as { identity?: { name?: string } };
+function candidateNameSlug(profile: ProfileData): string {
 	return slugify(profile.identity?.name ?? 'candidat');
 }
 
-export async function runAnalysis(jobId: number): Promise<void> {
-	const job = getJob(jobId);
+function requireProfile(profileSlug: string): ProfileData {
+	const profile = getProfile(profileSlug);
+	if (!profile) throw new Error(`Profil introuvable : ${profileSlug}`);
+	return profile;
+}
+
+export async function runAnalysis(jobId: number, profileSlug: string): Promise<void> {
+	const job = getJob(jobId, profileSlug);
 	if (!job) return;
 
 	try {
-		const content = await analyzeOffer(job.offer_text, readProfile(), parseLocale(job.language));
-		updateJob(jobId, { status: 'ready', result_json: JSON.stringify(content) });
+		const profile = requireProfile(profileSlug);
+		const content = await analyzeOffer(job.offer_text, profile, parseLocale(job.language));
+		updateJob(jobId, { status: 'ready', result_json: JSON.stringify(content) }, profileSlug);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
-		updateJob(jobId, { status: 'error', error_message: message });
+		updateJob(jobId, { status: 'error', error_message: message }, profileSlug);
 	}
 }
 
-export async function runGeneration(jobId: number): Promise<void> {
-	const job = getJob(jobId);
+export async function runGeneration(jobId: number, profileSlug: string): Promise<void> {
+	const job = getJob(jobId, profileSlug);
 	if (!job || !job.result_json) return;
 
 	const content = JSON.parse(job.result_json) as ProposedContent;
@@ -40,13 +40,20 @@ export async function runGeneration(jobId: number): Promise<void> {
 	const shouldGenerateCoverLetter = !!job.generate_cover_letter;
 
 	try {
-		const subdir = applicationSlug(content.company, content.role);
-		const candidateSlug = candidateNameSlug();
+		const profile = requireProfile(profileSlug);
+		const subdir = `${profileSlug}/${applicationSlug(content.company, content.role)}`;
+		const candidateSlug = candidateNameSlug(profile);
 		const letterPrefix = language === 'en' ? 'Cover_Letter' : 'Lettre';
 
-		const cvResult = await generateCvDocx(content.cv, `CV_${candidateSlug}_${language}_${subdir}.docx`, subdir, language);
+		const cvResult = await generateCvDocx(profile, content.cv, `CV_${candidateSlug}_${language}_${subdir}.docx`, subdir, language);
 		const letterResult = shouldGenerateCoverLetter
-			? await generateCoverLetterDocx(content.cover_letter, `${letterPrefix}_${candidateSlug}_${language}_${subdir}.docx`, subdir, language)
+			? await generateCoverLetterDocx(
+					profile,
+					content.cover_letter,
+					`${letterPrefix}_${candidateSlug}_${language}_${subdir}.docx`,
+					subdir,
+					language
+				)
 			: null;
 
 		const applicationId = insertApplication({
@@ -55,6 +62,7 @@ export async function runGeneration(jobId: number): Promise<void> {
 			status: 'Envoyé',
 			cv_file_path: cvResult.path,
 			cover_letter_file_path: letterResult?.path ?? null,
+			profile_slug: profileSlug,
 		});
 
 		let secondaryCvPath: string | null = null;
@@ -63,9 +71,10 @@ export async function runGeneration(jobId: number): Promise<void> {
 		if (job.also_other_language) {
 			const otherLanguage: Locale = language === 'en' ? 'fr' : 'en';
 			const otherLetterPrefix = otherLanguage === 'en' ? 'Cover_Letter' : 'Lettre';
-			const otherContent = await analyzeOffer(job.offer_text, readProfile(), otherLanguage);
+			const otherContent = await analyzeOffer(job.offer_text, profile, otherLanguage);
 
 			const secondaryCv = await generateCvDocx(
+				profile,
 				otherContent.cv,
 				`CV_${candidateSlug}_${otherLanguage}_${subdir}.docx`,
 				subdir,
@@ -75,6 +84,7 @@ export async function runGeneration(jobId: number): Promise<void> {
 
 			if (shouldGenerateCoverLetter) {
 				const secondaryLetter = await generateCoverLetterDocx(
+					profile,
 					otherContent.cover_letter,
 					`${otherLetterPrefix}_${candidateSlug}_${otherLanguage}_${subdir}.docx`,
 					subdir,
@@ -84,15 +94,19 @@ export async function runGeneration(jobId: number): Promise<void> {
 			}
 		}
 
-		updateJob(jobId, {
-			status: 'done',
-			application_id: applicationId,
-			cv_path: cvResult.path,
-			cover_letter_path: letterResult?.path ?? null,
-			result_json: JSON.stringify({ ...content, generation: { secondaryCvPath, secondaryCoverLetterPath } }),
-		});
+		updateJob(
+			jobId,
+			{
+				status: 'done',
+				application_id: applicationId,
+				cv_path: cvResult.path,
+				cover_letter_path: letterResult?.path ?? null,
+				result_json: JSON.stringify({ ...content, generation: { secondaryCvPath, secondaryCoverLetterPath } }),
+			},
+			profileSlug
+		);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
-		updateJob(jobId, { status: 'error', error_message: message });
+		updateJob(jobId, { status: 'error', error_message: message }, profileSlug);
 	}
 }

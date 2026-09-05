@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { ColorModeButton } from '@/components/ui/color-mode';
 import { useLocale } from '@/lib/locale-context';
 import { useSidebar } from '@/lib/sidebar-context';
+import { useProfile } from '@/lib/profile-context';
 import { Locale } from '@/lib/i18n';
 import type { WizardJobRow } from '@/lib/db';
 
@@ -16,6 +17,7 @@ export default function Sidebar() {
 	const pathname = usePathname();
 	const { locale, t, setLocale } = useLocale();
 	const { open, setOpen } = useSidebar();
+	const { profileSlug, profiles, setProfileSlug } = useProfile();
 	const [activeTaskCount, setActiveTaskCount] = useState(0);
 
 	useEffect(() => {
@@ -68,6 +70,28 @@ export default function Sidebar() {
 						Aiguill<span style={{ color: 'var(--accent)' }}>age</span>
 					</div>
 				</div>
+
+				{profiles.length > 0 && (
+					<select
+						value={profileSlug ?? ''}
+						onChange={(e) => setProfileSlug(e.target.value)}
+						style={{
+							border: '1px solid var(--rule)',
+							borderRadius: 5,
+							padding: '7px 9px',
+							background: 'var(--surface)',
+							color: 'var(--ink)',
+							fontSize: 13,
+							fontFamily: 'inherit',
+						}}
+					>
+						{profiles.map((p) => (
+							<option key={p.slug} value={p.slug}>
+								{p.label}
+							</option>
+						))}
+					</select>
+				)}
 
 				<nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 					{navItems.map((item) => {
