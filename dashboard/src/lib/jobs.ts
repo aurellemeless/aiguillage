@@ -41,16 +41,17 @@ export async function runGeneration(jobId: number, profileSlug: string): Promise
 
 	try {
 		const profile = requireProfile(profileSlug);
-		const subdir = `${profileSlug}/${applicationSlug(content.company, content.role)}`;
+		const appSlug = applicationSlug(content.company, content.role);
+		const subdir = `${profileSlug}/${appSlug}`;
 		const candidateSlug = candidateNameSlug(profile);
 		const letterPrefix = language === 'en' ? 'Cover_Letter' : 'Lettre';
 
-		const cvResult = await generateCvDocx(profile, content.cv, `CV_${candidateSlug}_${language}_${subdir}.docx`, subdir, language);
+		const cvResult = await generateCvDocx(profile, content.cv, `CV_${candidateSlug}_${language}_${appSlug}.docx`, subdir, language);
 		const letterResult = shouldGenerateCoverLetter
 			? await generateCoverLetterDocx(
 					profile,
 					content.cover_letter,
-					`${letterPrefix}_${candidateSlug}_${language}_${subdir}.docx`,
+					`${letterPrefix}_${candidateSlug}_${language}_${appSlug}.docx`,
 					subdir,
 					language
 				)
@@ -76,7 +77,7 @@ export async function runGeneration(jobId: number, profileSlug: string): Promise
 			const secondaryCv = await generateCvDocx(
 				profile,
 				otherContent.cv,
-				`CV_${candidateSlug}_${otherLanguage}_${subdir}.docx`,
+				`CV_${candidateSlug}_${otherLanguage}_${appSlug}.docx`,
 				subdir,
 				otherLanguage
 			);
@@ -86,7 +87,7 @@ export async function runGeneration(jobId: number, profileSlug: string): Promise
 				const secondaryLetter = await generateCoverLetterDocx(
 					profile,
 					otherContent.cover_letter,
-					`${otherLetterPrefix}_${candidateSlug}_${otherLanguage}_${subdir}.docx`,
+					`${otherLetterPrefix}_${candidateSlug}_${otherLanguage}_${appSlug}.docx`,
 					subdir,
 					otherLanguage
 				);
