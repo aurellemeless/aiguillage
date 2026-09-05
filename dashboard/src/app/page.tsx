@@ -1,9 +1,11 @@
+import { redirect } from 'next/navigation';
 import NextLink from 'next/link';
 import { listApplicationsWithHistory } from '@/lib/db';
 import { isFollowupDue } from '@/lib/followup';
 import { daysSince, formatDate, formatDateTime } from '@/lib/status';
 import { dayPrefix, getDict, statusLabel } from '@/lib/i18n';
 import { getServerLocale } from '@/lib/server-locale';
+import { getServerProfileSlug } from '@/lib/server-profile';
 import SearchBox from '@/components/search-box';
 import MenuButton from '@/components/menu-button';
 
@@ -15,7 +17,9 @@ const INTERVIEW_STATUSES = new Set(['Entretien RH', 'Entretien technique']);
 export default async function DashboardPage() {
 	const locale = await getServerLocale();
 	const t = getDict(locale);
-	const applications = listApplicationsWithHistory();
+	const profileSlug = await getServerProfileSlug();
+	if (!profileSlug) redirect('/profil');
+	const applications = listApplicationsWithHistory(profileSlug);
 
 	const total = applications.length;
 	const active = applications.filter((a) => !ACTIVE_STATUSES_EXCLUDED.has(a.status)).length;

@@ -179,11 +179,15 @@ function stripMarkdownFences(text: string): string {
 }
 
 async function runClaudeForJson(prompt: string, toolsFlag: string[]): Promise<unknown> {
-	const { stdout } = await execFileAsync('claude', ['-p', prompt, '--output-format', 'json', ...toolsFlag], {
+	const execution = execFileAsync('claude', ['-p', prompt, '--output-format', 'json', ...toolsFlag], {
 		cwd: PROJECT_ROOT,
 		timeout: 120_000,
 		maxBuffer: 10 * 1024 * 1024,
 	});
+	// claude reads a piped (non-TTY) stdin by default and waits a few seconds for
+	// input before giving up; we never send any, so close it immediately.
+	execution.child.stdin?.end();
+	const { stdout } = await execution;
 
 	const envelope = JSON.parse(stdout);
 	if (envelope.is_error) {

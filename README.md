@@ -1,6 +1,6 @@
 # Aiguillage
 
-[![Version](https://img.shields.io/badge/version-1.1.0-informational.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.2.0-informational.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A personal job-application tracker: paste a job posting, the app generates a
@@ -12,9 +12,12 @@ history — toward its destination.
 > sidebar and also controls the language of the generated CV and cover
 > letter.
 
-This project is built for **local, single-user** use — there's no
-authentication or multi-account support. It's open source so others can
-reuse it, adapt it, or take inspiration from it with their own profile.
+This project is built for **local** use — there's no authentication or
+network multi-tenancy. It supports several local profiles though (useful if
+more than one person in your household job-hunts with it), each with its own
+fully separate board, tasks, and generated documents. It's open source so
+others can reuse it, adapt it, or take inspiration from it with their own
+profile.
 
 ## Screenshots
 
@@ -27,11 +30,16 @@ reuse it, adapt it, or take inspiration from it with their own profile.
 ## Features
 
 - Analyzes a plain-text job posting with Claude Code (headless), based on
-  your profile (`profile/profile.json`), to propose a tailored CV and cover
-  letter.
+  your profile, to propose a tailored CV and cover letter.
 - Review and edit the proposed content before generating documents, with a
   live CV preview.
 - Generates `.docx` documents (dedicated Python service).
+- Analysis and generation run as background tasks (a "Tâches" page + sidebar
+  badge track their status), so you can start one on your laptop, close the
+  tab, and pick the review back up from your phone on the same Wi-Fi.
+- Several local profiles, switchable from the sidebar, each with its own
+  fully separate Kanban board, dashboard, tasks, and generated documents —
+  useful if more than one person uses the app.
 - Dashboard: active applications, awaiting response, ongoing interviews,
   response rate, follow-ups due, recent activity.
 - Kanban view (drag a card to another column to change its status) and list
@@ -44,12 +52,12 @@ reuse it, adapt it, or take inspiration from it with their own profile.
   once (two separate files per document).
 - Profile editor with a proper form (identity, skills, experience,
   education, certifications, languages, personal projects) instead of raw
-  JSON — pre-filled from `profile/profile.json`, and can also be filled in
-  by importing an existing CV (PDF or DOCX).
+  JSON, and can also be filled in by importing an existing CV (PDF or DOCX).
 - Excel export of all applications and their full status-change history, for
   analysis outside the app.
 - QR code printed in the terminal when the dev server is ready, to open the
   board straight from your phone.
+- Responsive UI, usable on mobile.
 
 ## Requirements
 
@@ -60,17 +68,13 @@ reuse it, adapt it, or take inspiration from it with their own profile.
 
 ## Setup
 
-1. **Clone the repo, then create your profile.** Either copy the provided
-   template and fill it in by hand:
-
-   ```bash
-   cp profile/profile-default.json profile/profile.json
-   ```
-
-   or start the app and use the **Profile** page to import your existing CV
-   (PDF/DOCX) — it extracts your information and lets you review it before
-   saving. Either way, `profile/profile.json` holds personal data: it's
-   git-ignored and should never be committed.
+1. **Clone the repo, then create your profile.** Start the app and use the
+   **Profile** page to create a profile, then either fill it in by hand or
+   import your existing CV (PDF/DOCX) — it extracts your information and
+   lets you review it before saving. Add more profiles the same way if more
+   than one person will use the app; switch between them from the sidebar.
+   Profiles live under `profile/profiles/` and hold personal data: the whole
+   folder is git-ignored and should never be committed.
 
 2. **CV generation service** (`services/cv-generator`):
 
@@ -122,7 +126,7 @@ python3 tracker_cli.py list
 dashboard/               Next.js — dashboard, Kanban, application wizard
 services/cv-generator/   FastAPI + python-docx — .docx generation
 tracker/                 Python CLI + SQLite schema for tracking
-profile/                 Your profile (profile.json, git-ignored)
+profile/                 Your profile(s) (profiles/*.json, git-ignored)
 data/                    SQLite database + generated documents (git-ignored)
 ```
 

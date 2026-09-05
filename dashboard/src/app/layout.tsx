@@ -4,7 +4,10 @@ import './globals.css';
 import { Provider } from '@/components/ui/provider';
 import { LocaleProvider } from '@/lib/locale-context';
 import { SidebarProvider } from '@/lib/sidebar-context';
+import { ProfileProvider } from '@/lib/profile-context';
 import { getServerLocale } from '@/lib/server-locale';
+import { getServerProfileSlug } from '@/lib/server-profile';
+import { listProfiles } from '@/lib/profiles';
 import Sidebar from '@/components/sidebar';
 
 const plexSans = IBM_Plex_Sans({
@@ -40,6 +43,8 @@ export default async function RootLayout({
 	children: React.ReactNode;
 }>) {
 	const locale = await getServerLocale();
+	const profiles = listProfiles();
+	const profileSlug = await getServerProfileSlug();
 
 	return (
 		<html
@@ -50,12 +55,14 @@ export default async function RootLayout({
 			<body>
 				<Provider>
 					<LocaleProvider initialLocale={locale}>
-						<SidebarProvider>
-							<div className='app-shell'>
-								<Sidebar />
-								<div className='app-main'>{children}</div>
-							</div>
-						</SidebarProvider>
+						<ProfileProvider initialSlug={profileSlug} initialProfiles={profiles}>
+							<SidebarProvider>
+								<div className='app-shell'>
+									<Sidebar />
+									<div className='app-main'>{children}</div>
+								</div>
+							</SidebarProvider>
+						</ProfileProvider>
 					</LocaleProvider>
 				</Provider>
 			</body>

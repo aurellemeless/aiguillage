@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { listApplicationsWithHistory } from '@/lib/db';
 import { getDict, statusLabel } from '@/lib/i18n';
 import { getServerLocale } from '@/lib/server-locale';
+import { getServerProfileSlug } from '@/lib/server-profile';
 
 function toDate(value: string | null): Date | null {
 	if (!value) return null;
@@ -13,7 +14,9 @@ function toDate(value: string | null): Date | null {
 export async function GET() {
 	const locale = await getServerLocale();
 	const t = getDict(locale);
-	const applications = listApplicationsWithHistory();
+	const profileSlug = await getServerProfileSlug();
+	if (!profileSlug) return NextResponse.json({ error: 'Aucun profil actif.' }, { status: 400 });
+	const applications = listApplicationsWithHistory(profileSlug);
 
 	const dateFmt = locale === 'en' ? 'mm/dd/yyyy' : 'dd/mm/yyyy';
 	const dateTimeFmt = locale === 'en' ? 'mm/dd/yyyy hh:mm' : 'dd/mm/yyyy hh:mm';

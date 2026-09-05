@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateStatus } from '@/lib/db';
+import { getServerProfileSlug } from '@/lib/server-profile';
 import { STATUSES } from '@/lib/types';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -11,6 +12,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 		return NextResponse.json({ error: `Statut inconnu : ${status}` }, { status: 400 });
 	}
 
-	updateStatus(applicationId, status);
+	const profileSlug = await getServerProfileSlug();
+	if (!profileSlug) return NextResponse.json({ error: 'Aucun profil actif.' }, { status: 400 });
+
+	updateStatus(applicationId, status, profileSlug);
 	return NextResponse.json({ ok: true });
 }

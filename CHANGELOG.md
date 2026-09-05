@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.0] — 2026-09-06
+
+### Added
+
+- Analysis and document generation now run as background tasks, tracked in a
+  new "Tâches" page and a sidebar badge: start one on your laptop, close the
+  tab, and resume the review from any device on the same network.
+- Multiple profiles: track entirely separate candidates, each with its own
+  Kanban board, dashboard, tasks, and generated documents. Switchable from
+  the sidebar, with a "set as default" option for the one that should load
+  first on a new device.
+- Responsive layout, including an off-canvas sidebar with a hamburger menu,
+  so the dashboard is usable on mobile.
+
+### Fixed
+
+- `claude -p` calls waited a few seconds per run for a stdin input that
+  never came, before proceeding — its input is now closed immediately.
+- Several card layouts (experience/skills rows, the profile import card, the
+  Kanban toolbar, task/follow-up cards) overflowed the viewport on mobile.
+- Retrying a job after a generation failure was permanently blocked by a
+  misleading "already launched" error.
+- Generation could fail outright after the multi-profile change, due to a
+  profile-scoped path being embedded in the output filename instead of only
+  the output directory.
+
 ## [1.1.0] — 2026-09-02
 
 ### Added
