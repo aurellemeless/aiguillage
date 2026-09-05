@@ -530,6 +530,23 @@ details.advanced .form-section-body {
 	background: var(--rust-soft);
 	transform: rotate(1.4deg);
 }
+.stamp.analyzing,
+.stamp.generating {
+	color: var(--amber);
+	background: var(--amber-soft);
+}
+.stamp.ready {
+	color: var(--accent);
+	background: var(--accent-soft);
+}
+.stamp.done {
+	color: var(--green);
+	background: var(--green-soft);
+}
+.stamp.error {
+	color: var(--rust);
+	background: var(--rust-soft);
+}
 
 /* ---------- dashboard ---------- */
 .kpi-row {

@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ReviewForm from '@/components/review-form';
 import CvPreview from '@/components/cv-preview';
 import CopyablePath from '@/components/copyable-path';
 import { ProposedContent } from '@/lib/types';
-import { Locale } from '@/lib/i18n';
+import { Locale, parseLocale } from '@/lib/i18n';
 import { useLocale } from '@/lib/locale-context';
+import type { WizardJobRow } from '@/lib/db';
+import { useJobPolling } from '@/lib/use-job-polling';
 import MenuButton from '@/components/menu-button';
 
 type Step = 'offre' | 'analyse' | 'relecture' | 'generation' | 'termine';
@@ -19,9 +21,22 @@ interface GenerateResult {
 	secondaryCoverLetterPath?: string | null;
 }
 
+const PATCH_DEBOUNCE_MS = 800;
+
 export default function NouvelleCandidaturePage() {
+	return (
+		<Suspense fallback={null}>
+			<NouvelleCandidatureInner />
+		</Suspense>
+	);
+}
+
+function NouvelleCandidatureInner() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const { locale, t } = useLocale();
+
+	const [jobId, setJobId] = useState<number | null>(null);
 	const [step, setStep] = useState<Step>('offre');
 	const [offerText, setOfferText] = useState('');
 	const [content, setContent] = useState<ProposedContent | null>(null);
@@ -30,6 +45,8 @@ export default function NouvelleCandidaturePage() {
 	const [generateLetter, setGenerateLetter] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [result, setResult] = useState<GenerateResult | null>(null);
+
+	const patchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const otherLocale: Locale = contentLocale === 'en' ? 'fr' : 'en';
 	const langLabel = (l: Locale) => (l === 'en' ? t.reviewForm.langEn : t.reviewForm.langFr);
@@ -43,20 +60,93 @@ export default function NouvelleCandidaturePage() {
 	];
 	const currentIndex = STEPS.findIndex((s) => s.key === step);
 
+	function applyJob(job: WizardJobRow) {
+		setOfferText(job.offer_text);
+		setContentLocale(parseLocale(job.language));
+		setAlsoOtherLanguage(!!job.also_other_language);
+		setGenerateLetter(!!job.generate_cover_letter);
+		setError(job.error_message ?? null);
+
+		if (job.result_json) {
+			const { generation, ...proposedContent } = JSON.parse(job.result_json) as ProposedContent & {
+				generation?: { secondaryCvPath: string | null; secondaryCoverLetterPath: string | null };
+			};
+			setContent(proposedContent as ProposedContent);
+			if (job.status === 'done') {
+				setResult({
+					cvPath: job.cv_path ?? '',
+					coverLetterPath: job.cover_letter_path,
+					secondaryCvPath: generation?.secondaryCvPath ?? undefined,
+					secondaryCoverLetterPath: generation?.secondaryCoverLetterPath ?? null,
+				});
+			}
+		}
+
+		if (job.status === 'error') {
+			setStep(job.result_json ? 'relecture' : 'offre');
+		} else {
+			setStep({ analyzing: 'analyse', ready: 'relecture', generating: 'generation', done: 'termine' }[job.status] as Step);
+		}
+	}
+
+	// Resume an existing job from ?job=<id>, once on mount.
+	useEffect(() => {
+		const jobParam = searchParams.get('job');
+		const id = jobParam ? Number(jobParam) : null;
+		if (!id || !Number.isFinite(id)) return;
+		setJobId(id);
+		fetch(`/api/jobs/${id}`)
+			.then((res) => res.json())
+			.then((data) => {
+				if (data.job) applyJob(data.job);
+			})
+			.catch(() => setError(t.wizard.analyzeFailed));
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	useJobPolling(jobId, step === 'analyse' || step === 'generation', applyJob);
+
+	function schedulePatch(body: Record<string, unknown>) {
+		if (!jobId) return;
+		if (patchTimer.current) clearTimeout(patchTimer.current);
+		patchTimer.current = setTimeout(() => {
+			fetch(`/api/jobs/${jobId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body),
+			}).catch(() => {});
+		}, PATCH_DEBOUNCE_MS);
+	}
+
+	function handleContentChange(next: ProposedContent) {
+		setContent(next);
+		schedulePatch({ content: next });
+	}
+
+	function handleToggleGenerateLetter(value: boolean) {
+		setGenerateLetter(value);
+		schedulePatch({ generateCoverLetter: value });
+	}
+
+	function handleToggleSecondaryLanguage(value: boolean) {
+		setAlsoOtherLanguage(value);
+		schedulePatch({ alsoOtherLanguage: value });
+	}
+
 	async function handleAnalyze() {
 		setError(null);
 		setStep('analyse');
 		try {
-			const res = await fetch('/api/analyze', {
+			const res = await fetch('/api/jobs', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ offerText, language: locale }),
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.wizard.analyzeFailed);
-			setContent(data as ProposedContent);
+			setJobId(data.jobId);
 			setContentLocale(locale);
-			setStep('relecture');
+			router.replace(`/nouvelle?job=${data.jobId}`);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
 			setStep('offre');
@@ -64,56 +154,13 @@ export default function NouvelleCandidaturePage() {
 	}
 
 	async function handleGenerate() {
-		if (!content) return;
+		if (!jobId) return;
 		setError(null);
 		setStep('generation');
 		try {
-			const res = await fetch('/api/generate', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					company: content.company,
-					role: content.role,
-					cv: content.cv,
-					coverLetter: generateLetter ? content.cover_letter : undefined,
-					language: contentLocale,
-				}),
-			});
+			const res = await fetch(`/api/jobs/${jobId}/generate`, { method: 'POST' });
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.wizard.generateFailed);
-
-			const finalResult: GenerateResult = { cvPath: data.cvPath, coverLetterPath: data.coverLetterPath };
-
-			if (alsoOtherLanguage) {
-				const analyzeRes = await fetch('/api/analyze', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ offerText, language: otherLocale }),
-				});
-				const otherContent = (await analyzeRes.json()) as ProposedContent;
-				if (!analyzeRes.ok) throw new Error(t.wizard.generateFailed);
-
-				const secondRes = await fetch('/api/generate', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						company: otherContent.company,
-						role: otherContent.role,
-						cv: otherContent.cv,
-						coverLetter: generateLetter ? otherContent.cover_letter : undefined,
-						language: otherLocale,
-						subdir: data.subdir,
-						skipRecord: true,
-					}),
-				});
-				const secondData = await secondRes.json();
-				if (!secondRes.ok) throw new Error(secondData.error ?? t.wizard.generateFailed);
-				finalResult.secondaryCvPath = secondData.cvPath;
-				finalResult.secondaryCoverLetterPath = secondData.coverLetterPath;
-			}
-
-			setResult(finalResult);
-			setStep('termine');
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
 			setStep('relecture');
@@ -121,6 +168,7 @@ export default function NouvelleCandidaturePage() {
 	}
 
 	function reset() {
+		setJobId(null);
 		setStep('offre');
 		setOfferText('');
 		setContent(null);
@@ -128,6 +176,7 @@ export default function NouvelleCandidaturePage() {
 		setGenerateLetter(true);
 		setResult(null);
 		setError(null);
+		router.replace('/nouvelle');
 	}
 
 	return (
@@ -181,13 +230,13 @@ export default function NouvelleCandidaturePage() {
 						<div>
 							<ReviewForm
 								content={content}
-								onChange={setContent}
+								onChange={handleContentChange}
 								generateCoverLetter={generateLetter}
-								onToggleGenerateCoverLetter={setGenerateLetter}
+								onToggleGenerateCoverLetter={handleToggleGenerateLetter}
 								primaryLanguageLabel={langLabel(contentLocale)}
 								secondaryLanguageLabel={langLabel(otherLocale)}
 								secondaryLanguageChecked={alsoOtherLanguage}
-								onToggleSecondaryLanguage={setAlsoOtherLanguage}
+								onToggleSecondaryLanguage={handleToggleSecondaryLanguage}
 							/>
 						</div>
 						<div className='wizard-preview-sticky'>

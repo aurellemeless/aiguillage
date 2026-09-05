@@ -21,3 +21,19 @@ CREATE TABLE IF NOT EXISTS status_history (
     status TEXT NOT NULL,
     changed_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS wizard_jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    status TEXT NOT NULL, -- analyzing | ready | generating | done | error
+    language TEXT NOT NULL,
+    offer_text TEXT NOT NULL,
+    also_other_language INTEGER NOT NULL DEFAULT 0,
+    generate_cover_letter INTEGER NOT NULL DEFAULT 1,
+    result_json TEXT,
+    error_message TEXT,
+    application_id INTEGER REFERENCES applications(id),
+    cv_path TEXT,
+    cover_letter_path TEXT
+);
