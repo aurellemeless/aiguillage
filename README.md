@@ -44,8 +44,9 @@ profile.
   response rate, follow-ups due, recent activity.
 - Kanban view (drag a card to another column to change its status) and list
   view.
-- Detail panel per application: status, generated documents, status-change
-  history, free-form notes.
+- Detail panel per application: status, the original job posting (handy for
+  interview prep), generated documents, status-change history, free-form
+  notes.
 - CLI tracking (`tracker/tracker_cli.py`) alongside the dashboard.
 - French/English interface switch, also used as the generation language for
   the CV and cover letter — with an option to generate both languages at
