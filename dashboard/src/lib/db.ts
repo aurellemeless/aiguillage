@@ -63,6 +63,7 @@ export interface NewApplication {
 	company: string;
 	role: string;
 	offer_source?: string | null;
+	offer_text?: string | null;
 	status: string;
 	cv_file_path?: string | null;
 	cover_letter_file_path?: string | null;
@@ -75,13 +76,14 @@ export function insertApplication(app: NewApplication): number {
 	const result = database
 		.prepare(
 			`INSERT INTO applications
-				(company, role, offer_source, application_date, status, cv_file_path, cover_letter_file_path, profile_slug)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+				(company, role, offer_source, offer_text, application_date, status, cv_file_path, cover_letter_file_path, profile_slug)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			app.company,
 			app.role,
 			app.offer_source ?? null,
+			app.offer_text ?? null,
 			today,
 			app.status,
 			app.cv_file_path ?? null,

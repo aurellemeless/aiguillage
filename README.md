@@ -1,6 +1,6 @@
 # Aiguillage
 
-[![Version](https://img.shields.io/badge/version-1.2.0-informational.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.0-informational.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A personal job-application tracker: paste a job posting, the app generates a
@@ -44,8 +44,9 @@ profile.
   response rate, follow-ups due, recent activity.
 - Kanban view (drag a card to another column to change its status) and list
   view.
-- Detail panel per application: status, generated documents, status-change
-  history, free-form notes.
+- Detail panel per application: status, the original job posting (handy for
+  interview prep), generated documents, status-change history, free-form
+  notes.
 - CLI tracking (`tracker/tracker_cli.py`) alongside the dashboard.
 - French/English interface switch, also used as the generation language for
   the CV and cover letter — with an option to generate both languages at
@@ -116,7 +117,7 @@ Wi-Fi).
 
 ```bash
 cd tracker
-python3 tracker_cli.py add --company "Acme" --role "Full Stack Dev" --status Brouillon
+python3 tracker_cli.py add --company "Acme" --role "Full Stack Dev" --status draft
 python3 tracker_cli.py list
 ```
 

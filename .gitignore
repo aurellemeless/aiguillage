@@ -11,3 +11,4 @@ data/tmp/
 profile/profile.json
 profile/profiles/
 profile/default-profile.json
+.claude/settings.local.json

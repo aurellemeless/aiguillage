@@ -4,21 +4,32 @@ from datetime import date, datetime, timedelta
 
 from db import get_connection, init_db
 
-# Status values are kept in French: they are user-facing content shown in the
-# CLI output and (later) the dashboard UI, not code identifiers.
+# Status values are English identifiers (matching the dashboard/DB), not
+# display text. STATUS_LABELS below is only for what this CLI prints.
 STATUSES = [
-    "Brouillon",
-    "Envoyé",
-    "Réponse reçue",
-    "Entretien RH",
-    "Entretien technique",
-    "Offre reçue",
-    "Refusé",
-    "Sans réponse/Abandonné",
+    "draft",
+    "sent",
+    "response_received",
+    "hr_interview",
+    "technical_interview",
+    "offer_received",
+    "rejected",
+    "no_response_abandoned",
 ]
 
+STATUS_LABELS = {
+    "draft": "Brouillon",
+    "sent": "Envoyé",
+    "response_received": "Réponse reçue",
+    "hr_interview": "Entretien RH",
+    "technical_interview": "Entretien technique",
+    "offer_received": "Offre reçue",
+    "rejected": "Refusé",
+    "no_response_abandoned": "Sans réponse/Abandonné",
+}
+
 # Statuses for which a follow-up makes sense (waiting on a response).
-PENDING_STATUSES = {"Envoyé"}
+PENDING_STATUSES = {"sent"}
 
 
 def business_days_between(start: date, end: date) -> int:
@@ -66,7 +77,7 @@ def cmd_add(args):
     )
     conn.commit()
     conn.close()
-    print(f"Candidature #{application_id} créée : {args.company} — {args.role} ({args.status})")
+    print(f"Candidature #{application_id} créée : {args.company} — {args.role} ({STATUS_LABELS[args.status]})")
 
 
 def cmd_update_status(args):
@@ -85,7 +96,7 @@ def cmd_update_status(args):
     )
     conn.commit()
     conn.close()
-    print(f"Candidature #{args.id} -> statut '{args.status}'")
+    print(f"Candidature #{args.id} -> statut '{STATUS_LABELS[args.status]}'")
 
 
 def cmd_list(args):
@@ -116,7 +127,7 @@ def cmd_list(args):
         badge = " [A RELANCER]" if followup_due else ""
         print(
             f"#{row['id']} — {row['company']} — {row['role']} — "
-            f"{row['status']} (envoyé le {row['application_date']}){badge}"
+            f"{STATUS_LABELS.get(row['status'], row['status'])} (envoyé le {row['application_date']}){badge}"
         )
 
 
@@ -138,7 +149,7 @@ def build_parser():
     p_add.add_argument("--offer-source")
     p_add.add_argument("--offer-date")
     p_add.add_argument("--application-date", help="Défaut : aujourd'hui")
-    p_add.add_argument("--status", default="Brouillon", choices=STATUSES)
+    p_add.add_argument("--status", default="draft", choices=STATUSES)
     p_add.add_argument("--followup-delay-days", type=int, default=10)
     p_add.add_argument("--notes")
     p_add.add_argument("--recruiter-contact")

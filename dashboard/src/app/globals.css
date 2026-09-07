@@ -503,24 +503,24 @@ details.advanced .form-section-body {
 	font-weight: 600;
 	white-space: nowrap;
 }
-.stamp.brouillon {
+.stamp.draft {
 	color: var(--ink-faint);
 	background: var(--surface-2);
 }
-.stamp.envoye {
+.stamp.sent {
 	color: var(--accent);
 	background: var(--accent-soft);
 }
-.stamp.reponse,
-.stamp.entretien {
+.stamp.response_received,
+.stamp.interview {
 	color: var(--amber);
 	background: var(--amber-soft);
 }
-.stamp.offre {
+.stamp.offer {
 	color: var(--green);
 	background: var(--green-soft);
 }
-.stamp.refuse {
+.stamp.rejected {
 	color: var(--ink-faint);
 	background: var(--surface-2);
 	text-decoration: line-through;

@@ -2,18 +2,18 @@ import { Status } from './types';
 import { Locale } from './i18n';
 
 const STAMP_CLASS: Record<Status, string> = {
-	Brouillon: 'brouillon',
-	Envoyé: 'envoye',
-	'Réponse reçue': 'reponse',
-	'Entretien RH': 'entretien',
-	'Entretien technique': 'entretien',
-	'Offre reçue': 'offre',
-	Refusé: 'refuse',
-	'Sans réponse/Abandonné': 'refuse',
+	draft: 'draft',
+	sent: 'sent',
+	response_received: 'response_received',
+	hr_interview: 'interview',
+	technical_interview: 'interview',
+	offer_received: 'offer',
+	rejected: 'rejected',
+	no_response_abandoned: 'rejected',
 };
 
 export function stampClassForStatus(status: string): string {
-	return STAMP_CLASS[status as Status] ?? 'brouillon';
+	return STAMP_CLASS[status as Status] ?? 'draft';
 }
 
 export function daysSince(dateStr: string | null): number | null {

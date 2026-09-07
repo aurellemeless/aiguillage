@@ -1,6 +1,6 @@
 // Statuses for which a follow-up makes sense (waiting on a response),
 // mirroring tracker/tracker_cli.py's PENDING_STATUSES.
-const PENDING_STATUSES = new Set(['Envoyé']);
+const PENDING_STATUSES = new Set(['sent']);
 
 function businessDaysBetween(start: Date, end: Date): number {
 	if (start >= end) return 0;

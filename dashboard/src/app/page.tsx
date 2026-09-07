@@ -11,8 +11,8 @@ import MenuButton from '@/components/menu-button';
 
 export const dynamic = 'force-dynamic';
 
-const ACTIVE_STATUSES_EXCLUDED = new Set(['Refusé', 'Sans réponse/Abandonné']);
-const INTERVIEW_STATUSES = new Set(['Entretien RH', 'Entretien technique']);
+const ACTIVE_STATUSES_EXCLUDED = new Set(['rejected', 'no_response_abandoned']);
+const INTERVIEW_STATUSES = new Set(['hr_interview', 'technical_interview']);
 
 export default async function DashboardPage() {
 	const locale = await getServerLocale();
@@ -23,11 +23,11 @@ export default async function DashboardPage() {
 
 	const total = applications.length;
 	const active = applications.filter((a) => !ACTIVE_STATUSES_EXCLUDED.has(a.status)).length;
-	const waiting = applications.filter((a) => a.status === 'Envoyé').length;
+	const waiting = applications.filter((a) => a.status === 'sent').length;
 	const interviews = applications.filter((a) => INTERVIEW_STATUSES.has(a.status)).length;
 
-	const sent = applications.filter((a) => a.status !== 'Brouillon').length;
-	const responded = applications.filter((a) => a.status !== 'Brouillon' && a.status !== 'Envoyé').length;
+	const sent = applications.filter((a) => a.status !== 'draft').length;
+	const responded = applications.filter((a) => a.status !== 'draft' && a.status !== 'sent').length;
 	const responseRate = sent > 0 ? Math.round((responded / sent) * 100) : 0;
 
 	const toFollowUp = applications

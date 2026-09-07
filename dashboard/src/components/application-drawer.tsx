@@ -9,7 +9,7 @@ import { statusLabel } from '@/lib/i18n';
 import { useLocale } from '@/lib/locale-context';
 import StatusStamp from '@/components/status-stamp';
 
-type Tab = 'resume' | 'docs' | 'hist' | 'notes';
+type Tab = 'resume' | 'offer' | 'docs' | 'hist' | 'notes';
 
 function fileName(path: string): string {
 	return path.split('/').pop() ?? path;
@@ -80,6 +80,9 @@ export default function ApplicationDrawer({
 								<button className={`tab ${tab === 'resume' ? 'active' : ''}`} onClick={() => setTab('resume')}>
 									{t.drawer.tabResume}
 								</button>
+								<button className={`tab ${tab === 'offer' ? 'active' : ''}`} onClick={() => setTab('offer')}>
+									{t.drawer.tabOffer}
+								</button>
 								<button className={`tab ${tab === 'docs' ? 'active' : ''}`} onClick={() => setTab('docs')}>
 									{t.drawer.tabDocs}
 								</button>
@@ -129,6 +132,21 @@ export default function ApplicationDrawer({
 											))}
 										</select>
 									</div>
+								</div>
+							)}
+
+							{tab === 'offer' && (
+								<div>
+									{application.offer_text ? (
+										<div
+											className='note-box'
+											style={{ whiteSpace: 'pre-wrap', maxHeight: 420, overflowY: 'auto' }}
+										>
+											{application.offer_text}
+										</div>
+									) : (
+										<div className='panel-empty'>{t.drawer.noOffer}</div>
+									)}
 								</div>
 							)}
 

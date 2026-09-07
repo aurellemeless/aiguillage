@@ -11,7 +11,7 @@ import { useLocale } from '@/lib/locale-context';
 import StatusStamp from '@/components/status-stamp';
 import ApplicationDrawer from '@/components/application-drawer';
 
-const CLOSED_STATUSES = new Set(['Refusé', 'Sans réponse/Abandonné', 'Offre reçue']);
+const CLOSED_STATUSES = new Set(['rejected', 'no_response_abandoned', 'offer_received']);
 
 function normalize(text: string): string {
 	return text
@@ -49,7 +49,7 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 	}, [items, query]);
 
 	function ageLabel(app: ApplicationWithHistory): string {
-		if (app.status === 'Brouillon') return '—';
+		if (app.status === 'draft') return '—';
 		if (CLOSED_STATUSES.has(app.status)) return formatDate(app.application_date, locale);
 		return `${dayPrefix(locale)}+${daysSince(app.application_date)}`;
 	}

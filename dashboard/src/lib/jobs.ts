@@ -60,7 +60,8 @@ export async function runGeneration(jobId: number, profileSlug: string): Promise
 		const applicationId = insertApplication({
 			company: content.company,
 			role: content.role,
-			status: 'Envoyé',
+			offer_text: job.offer_text,
+			status: 'sent',
 			cv_file_path: cvResult.path,
 			cover_letter_file_path: letterResult?.path ?? null,
 			profile_slug: profileSlug,
