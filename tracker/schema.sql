@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS applications (
     offer_text TEXT,
     offer_date TEXT,
     application_date TEXT,
-    status TEXT NOT NULL DEFAULT 'Brouillon',
+    status TEXT NOT NULL DEFAULT 'draft',
     next_followup_date TEXT,
     followup_delay_days INTEGER NOT NULL DEFAULT 10,
     notes TEXT,

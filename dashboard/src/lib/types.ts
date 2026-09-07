@@ -53,14 +53,14 @@ export interface Application {
 }
 
 export const STATUSES = [
-	'Brouillon',
-	'Envoyé',
-	'Réponse reçue',
-	'Entretien RH',
-	'Entretien technique',
-	'Offre reçue',
-	'Refusé',
-	'Sans réponse/Abandonné',
+	'draft',
+	'sent',
+	'response_received',
+	'hr_interview',
+	'technical_interview',
+	'offer_received',
+	'rejected',
+	'no_response_abandoned',
 ] as const;
 
 export type Status = (typeof STATUSES)[number];

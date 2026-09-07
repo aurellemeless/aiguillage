@@ -61,7 +61,7 @@ export async function runGeneration(jobId: number, profileSlug: string): Promise
 			company: content.company,
 			role: content.role,
 			offer_text: job.offer_text,
-			status: 'Envoyé',
+			status: 'sent',
 			cv_file_path: cvResult.path,
 			cover_letter_file_path: letterResult?.path ?? null,
 			profile_slug: profileSlug,
