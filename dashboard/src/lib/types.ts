@@ -38,6 +38,7 @@ export interface Application {
 	company: string;
 	role: string;
 	offer_source: string | null;
+	offer_text: string | null;
 	offer_date: string | null;
 	application_date: string | null;
 	status: string;

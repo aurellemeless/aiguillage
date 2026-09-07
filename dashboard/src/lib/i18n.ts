@@ -113,6 +113,7 @@ const dict = {
 		},
 		drawer: {
 			tabResume: 'Résumé',
+			tabOffer: "Offre",
 			tabDocs: 'CV & Lettre',
 			tabHistory: 'Historique',
 			tabNotes: 'Notes',
@@ -126,6 +127,7 @@ const dict = {
 			noDocuments: 'Aucun document généré pour cette candidature.',
 			localPathsHint: 'Chemins locaux — ouvre-les depuis le Finder ou ton éditeur.',
 			noHistory: 'Aucun historique.',
+			noOffer: "Texte de l'offre non disponible pour cette candidature.",
 			statusArrow: 'Statut →',
 			notesPlaceholder: "Ajouter une note (contact, préparation d'entretien, points à retenir…)",
 			notesSaved: 'Enregistré.',
@@ -352,6 +354,7 @@ const dict = {
 		},
 		drawer: {
 			tabResume: 'Summary',
+			tabOffer: 'Posting',
 			tabDocs: 'CV & Letter',
 			tabHistory: 'History',
 			tabNotes: 'Notes',
@@ -365,6 +368,7 @@ const dict = {
 			noDocuments: 'No documents generated for this application.',
 			localPathsHint: 'Local file paths — open them from your file browser or editor.',
 			noHistory: 'No history yet.',
+			noOffer: 'No posting text available for this application.',
 			statusArrow: 'Status →',
 			notesPlaceholder: 'Add a note (contact, interview prep, things to remember…)',
 			notesSaved: 'Saved.',

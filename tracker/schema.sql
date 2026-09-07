@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS applications (
     company TEXT NOT NULL,
     role TEXT NOT NULL,
     offer_source TEXT,
+    offer_text TEXT,
     offer_date TEXT,
     application_date TEXT,
     status TEXT NOT NULL DEFAULT 'Brouillon',
