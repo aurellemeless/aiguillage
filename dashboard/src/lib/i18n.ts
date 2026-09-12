@@ -131,6 +131,11 @@ const dict = {
 			statusArrow: 'Statut →',
 			notesPlaceholder: "Ajouter une note (contact, préparation d'entretien, points à retenir…)",
 			notesSaved: 'Enregistré.',
+			preview: 'Aperçu',
+			hidePreview: "Masquer l'aperçu",
+			revealInFolder: 'Afficher dans le dossier',
+			previewFailed: "Échec de l'aperçu.",
+			revealFailed: "Échec de l'ouverture du dossier.",
 		},
 		wizard: {
 			title: 'Nouvelle candidature',
@@ -372,6 +377,11 @@ const dict = {
 			statusArrow: 'Status →',
 			notesPlaceholder: 'Add a note (contact, interview prep, things to remember…)',
 			notesSaved: 'Saved.',
+			preview: 'Preview',
+			hidePreview: 'Hide preview',
+			revealInFolder: 'Show in folder',
+			previewFailed: 'Preview failed.',
+			revealFailed: 'Failed to open the folder.',
 		},
 		wizard: {
 			title: 'New application',

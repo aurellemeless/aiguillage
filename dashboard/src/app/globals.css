@@ -981,6 +981,42 @@ td.date {
 	outline: none;
 	border-color: var(--accent);
 }
+.docx-preview {
+	border: 1px solid var(--rule);
+	border-radius: 6px;
+	padding: 16px 18px;
+	margin-top: 10px;
+	max-height: 480px;
+	overflow-y: auto;
+	background: var(--paper);
+	font-size: 13px;
+	line-height: 1.55;
+	color: var(--ink);
+}
+.docx-preview :first-child {
+	margin-top: 0;
+}
+.docx-preview p {
+	margin: 0 0 10px;
+}
+.docx-preview h1,
+.docx-preview h2,
+.docx-preview h3 {
+	font-family: var(--font-display), serif;
+	line-height: 1.3;
+	margin: 16px 0 8px;
+}
+.docx-preview ul,
+.docx-preview ol {
+	margin: 0 0 10px;
+	padding-left: 20px;
+}
+.docx-preview strong {
+	color: var(--ink);
+}
+.docx-preview a {
+	color: var(--accent);
+}
 
 /* ---------- stepper (new application) ---------- */
 .stepper {
