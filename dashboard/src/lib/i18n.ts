@@ -236,6 +236,11 @@ const dict = {
 			noProfilesSub: 'Crée un premier profil pour générer un CV et suivre des candidatures.',
 			setAsDefault: 'Définir par défaut',
 			isDefault: '✓ Profil par défaut',
+			generateCvTitle: 'CV du profil',
+			generateCvHint: "Un CV général basé sur ce profil, sans offre précise — toujours le même fichier, régénéré à chaque clic.",
+			generateCv: 'Générer le CV',
+			regenerateCv: 'Régénérer le CV',
+			generateCvFailed: 'Échec de la génération du CV.',
 		},
 		profileForm: {
 			identity: 'Identité',
@@ -482,6 +487,11 @@ const dict = {
 			noProfilesSub: 'Create a first profile to generate a CV and track applications.',
 			setAsDefault: 'Set as default',
 			isDefault: '✓ Default profile',
+			generateCvTitle: 'Profile CV',
+			generateCvHint: 'A general CV based on this profile, with no specific posting — always the same file, regenerated on every click.',
+			generateCv: 'Generate CV',
+			regenerateCv: 'Regenerate CV',
+			generateCvFailed: 'Failed to generate the CV.',
 		},
 		profileForm: {
 			identity: 'Identity',
