@@ -23,6 +23,19 @@ interface GenerateResult {
 
 const PATCH_DEBOUNCE_MS = 800;
 
+// True only when the whole field is a single http(s) link, not text that
+// happens to contain one — a pasted job posting almost always has whitespace.
+function isBareUrl(value: string): boolean {
+	const trimmed = value.trim();
+	if (!trimmed || /\s/.test(trimmed)) return false;
+	try {
+		const parsed = new URL(trimmed);
+		return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+	} catch {
+		return false;
+	}
+}
+
 export default function NouvelleCandidaturePage() {
 	return (
 		<Suspense fallback={null}>
@@ -45,6 +58,7 @@ function NouvelleCandidatureInner() {
 	const [generateLetter, setGenerateLetter] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [result, setResult] = useState<GenerateResult | null>(null);
+	const [fetchingOffer, setFetchingOffer] = useState(false);
 
 	const patchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -135,12 +149,34 @@ function NouvelleCandidatureInner() {
 
 	async function handleAnalyze() {
 		setError(null);
+		let textToAnalyze = offerText;
+
+		if (isBareUrl(offerText)) {
+			setFetchingOffer(true);
+			try {
+				const res = await fetch('/api/jobs/fetch-offer', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ url: offerText.trim() }),
+				});
+				const data = await res.json();
+				if (!res.ok) throw new Error(data.error ?? t.wizard.fetchOfferFailed);
+				textToAnalyze = data.text;
+				setOfferText(data.text);
+			} catch (err) {
+				setError(err instanceof Error ? err.message : String(err));
+				setFetchingOffer(false);
+				return;
+			}
+			setFetchingOffer(false);
+		}
+
 		setStep('analyse');
 		try {
 			const res = await fetch('/api/jobs', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ offerText, language: locale }),
+				body: JSON.stringify({ offerText: textToAnalyze, language: locale }),
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.wizard.analyzeFailed);
@@ -208,11 +244,12 @@ function NouvelleCandidatureInner() {
 								placeholder={t.wizard.offerPlaceholder}
 								value={offerText}
 								onChange={(e) => setOfferText(e.target.value)}
+								disabled={fetchingOffer}
 							/>
 						</div>
 						<div className='wizard-actions'>
-							<button className='btn' onClick={handleAnalyze} disabled={!offerText.trim()}>
-								{t.wizard.analyze}
+							<button className='btn' onClick={handleAnalyze} disabled={!offerText.trim() || fetchingOffer}>
+								{fetchingOffer ? t.wizard.fetchingOffer : t.wizard.analyze}
 							</button>
 						</div>
 					</div>
