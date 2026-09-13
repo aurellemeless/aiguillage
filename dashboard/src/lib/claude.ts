@@ -178,6 +178,22 @@ function stripMarkdownFences(text: string): string {
 	return fenceMatch ? fenceMatch[1] : trimmed;
 }
 
+async function runClaudeForText(prompt: string, toolsFlag: string[]): Promise<string> {
+	const execution = execFileAsync('claude', ['-p', prompt, '--output-format', 'json', ...toolsFlag], {
+		cwd: PROJECT_ROOT,
+		timeout: 120_000,
+		maxBuffer: 10 * 1024 * 1024,
+	});
+	execution.child.stdin?.end();
+	const { stdout } = await execution;
+
+	const envelope = JSON.parse(stdout);
+	if (envelope.is_error) {
+		throw new Error(`Claude Code a renvoyé une erreur : ${envelope.result ?? 'raison inconnue'}`);
+	}
+	return (envelope.result as string).trim();
+}
+
 async function runClaudeForJson(prompt: string, toolsFlag: string[]): Promise<unknown> {
 	const execution = execFileAsync('claude', ['-p', prompt, '--output-format', 'json', ...toolsFlag], {
 		cwd: PROJECT_ROOT,
@@ -207,6 +223,73 @@ async function runClaudeForJson(prompt: string, toolsFlag: string[]): Promise<un
 export async function analyzeOffer(offerText: string, profile: object, language: Locale = 'fr'): Promise<ProposedContent> {
 	const prompt = buildPrompt(offerText, profile, language);
 	return runClaudeForJson(prompt, ['--disallowedTools', DISALLOWED_TOOLS]) as Promise<ProposedContent>;
+}
+
+interface FollowupContext {
+	company: string;
+	role: string;
+	offerText: string | null;
+	applicationDate: string | null;
+	previousFollowupsCount: number;
+}
+
+function buildFollowupPrompt(context: FollowupContext, profile: object, language: Locale): string {
+	const offerBlock = context.offerText
+		? language === 'en'
+			? `Here is the original job posting:\n"""\n${context.offerText}\n"""`
+			: `Voici l'offre d'emploi d'origine :\n"""\n${context.offerText}\n"""`
+		: language === 'en'
+			? 'The original job posting text is not available.'
+			: "Le texte de l'offre d'origine n'est pas disponible.";
+
+	if (language === 'en') {
+		return `You are an assistant who drafts a short, polite follow-up message for a job application sent but still unanswered, based on the candidate's profile.
+
+Here is the candidate's full profile (JSON):
+${JSON.stringify(profile)}
+
+Company: ${context.company}
+Role: ${context.role}
+Application sent on: ${context.applicationDate ?? 'unknown'}
+Follow-ups already sent for this application: ${context.previousFollowupsCount}
+
+${offerBlock}
+
+Strict instructions:
+- Write a short message (3-5 sentences), polite and professional, suitable as the body of a follow-up email.
+- Briefly restate the role and the application date, and reaffirm interest without being pushy.
+- If follow-ups were already sent, acknowledge this is a further follow-up without being redundant with a previous one.
+- Never invent information not given above.
+- Reply ONLY with the message body itself — no subject line, no markdown, no introductory phrase like "Here is the message", no surrounding quotes.`;
+	}
+
+	return `Tu es un assistant qui rédige un message de relance court et poli pour une candidature envoyée mais restée sans réponse, à partir du profil du candidat.
+
+Voici le profil complet du candidat (JSON) :
+${JSON.stringify(profile)}
+
+Entreprise : ${context.company}
+Poste : ${context.role}
+Candidature envoyée le : ${context.applicationDate ?? 'inconnue'}
+Relances déjà envoyées pour cette candidature : ${context.previousFollowupsCount}
+
+${offerBlock}
+
+Instructions strictes :
+- Rédige un message court (3 à 5 phrases), poli et professionnel, adapté au corps d'un email de relance.
+- Rappelle brièvement le poste visé et la date de candidature, et réitère l'intérêt pour le poste sans être insistant.
+- Si des relances ont déjà été envoyées, tiens-en compte sans répéter le contenu d'une relance précédente.
+- N'invente aucune information non fournie ci-dessus.
+- Réponds UNIQUEMENT avec le corps du message — pas d'objet, pas de markdown, pas de formule d'introduction du type « Voici le message », pas de guillemets autour.`;
+}
+
+export async function generateFollowupDraft(
+	context: FollowupContext,
+	profile: object,
+	language: Locale = 'fr'
+): Promise<string> {
+	const prompt = buildFollowupPrompt(context, profile, language);
+	return runClaudeForText(prompt, ['--disallowedTools', DISALLOWED_TOOLS]);
 }
 
 export async function extractProfileFromFile(filePath: string, language: Locale = 'fr'): Promise<object> {

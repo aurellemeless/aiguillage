@@ -177,7 +177,7 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 										<StatusStamp status={app.status} />
 									</td>
 									<td>
-										{isFollowupDue(app.status, app.application_date, app.followup_delay_days) ? (
+										{isFollowupDue(app.status, app.application_date, app.followup_delay_days, app.next_followup_date) ? (
 											<span className='stamp relance'>
 												{dayPrefix(locale)}+{daysSince(app.application_date)}
 											</span>

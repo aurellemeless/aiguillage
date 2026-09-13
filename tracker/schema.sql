@@ -40,3 +40,15 @@ CREATE TABLE IF NOT EXISTS wizard_jobs (
     cover_letter_path TEXT,
     profile_slug TEXT NOT NULL DEFAULT 'default'
 );
+
+CREATE TABLE IF NOT EXISTS followups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    application_id INTEGER NOT NULL REFERENCES applications(id),
+    followed_up_at TEXT NOT NULL,
+    note TEXT
+);
+
+CREATE TABLE IF NOT EXISTS profile_settings (
+    profile_slug TEXT PRIMARY KEY,
+    default_followup_delay_days INTEGER NOT NULL DEFAULT 10
+);

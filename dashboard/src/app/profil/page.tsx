@@ -36,6 +36,10 @@ export default function ProfilePage() {
 	const [cvPreviewLoading, setCvPreviewLoading] = useState(false);
 	const [cvRevealPending, setCvRevealPending] = useState(false);
 	const [cvError, setCvError] = useState<string | null>(null);
+	const [followupDelay, setFollowupDelay] = useState(10);
+	const [followupDelaySaving, setFollowupDelaySaving] = useState(false);
+	const [followupDelaySaved, setFollowupDelaySaved] = useState(false);
+	const [followupDelayError, setFollowupDelayError] = useState<string | null>(null);
 
 	useEffect(() => {
 		setCvPreviewOpen(false);
@@ -113,6 +117,35 @@ export default function ProfilePage() {
 			setCvError(err instanceof Error ? err.message : String(err));
 		} finally {
 			setCvRevealPending(false);
+		}
+	}
+
+	useEffect(() => {
+		if (!profileSlug) return;
+		fetch(`/api/profiles/${profileSlug}/settings`)
+			.then((res) => res.json())
+			.then((data) => setFollowupDelay(data.settings?.default_followup_delay_days ?? 10))
+			.catch(() => {});
+	}, [profileSlug]);
+
+	async function handleFollowupDelayBlur() {
+		if (!profileSlug) return;
+		setFollowupDelaySaving(true);
+		setFollowupDelayError(null);
+		try {
+			const res = await fetch(`/api/profiles/${profileSlug}/settings`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ defaultFollowupDelayDays: followupDelay }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? t.profile.followupDelayFailed);
+			setFollowupDelaySaved(true);
+			setTimeout(() => setFollowupDelaySaved(false), 1500);
+		} catch (err) {
+			setFollowupDelayError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setFollowupDelaySaving(false);
 		}
 	}
 
@@ -341,6 +374,33 @@ export default function ProfilePage() {
 							<button type='button' className='btn subtle' onClick={() => setCreatingProfile(true)}>
 								{t.profile.newProfile}
 							</button>
+						</div>
+					</div>
+				</div>
+
+				<div className='form-section'>
+					<div className='form-section-head'>
+						<h2>{t.profile.followupDelayTitle}</h2>
+						<span className='hint'>{t.profile.followupDelayHint}</span>
+					</div>
+					<div className='form-section-body'>
+						{followupDelayError && <div className='error-box'>{followupDelayError}</div>}
+						<div className='exp-row'>
+							<input
+								type='number'
+								min={1}
+								value={followupDelay}
+								onChange={(e) => setFollowupDelay(Number(e.target.value))}
+								onBlur={handleFollowupDelayBlur}
+								disabled={followupDelaySaving}
+								style={{ maxWidth: 100 }}
+							/>
+							<span className='hint'>{t.profile.followupDelayUnit}</span>
+							{followupDelaySaved && (
+								<span className='note' style={{ color: 'var(--green)' }}>
+									{t.profile.followupDelaySaved}
+								</span>
+							)}
 						</div>
 					</div>
 				</div>
