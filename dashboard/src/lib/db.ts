@@ -59,6 +59,14 @@ export function listApplications(profileSlug: string, statusFilter?: string): Ap
 		.all(profileSlug) as unknown as Application[];
 }
 
+export function getApplication(id: number, profileSlug: string): Application | undefined {
+	const database = getDb();
+	const row = database
+		.prepare('SELECT * FROM applications WHERE id = ? AND profile_slug = ?')
+		.get(id, profileSlug) as Application | undefined;
+	return row ? { ...row } : undefined;
+}
+
 export interface NewApplication {
 	company: string;
 	role: string;

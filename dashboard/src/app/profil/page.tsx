@@ -29,6 +29,92 @@ export default function ProfilePage() {
 	const [status, setStatus] = useState<string | null>(null);
 	const [creatingProfile, setCreatingProfile] = useState(false);
 	const [newProfileLabel, setNewProfileLabel] = useState('');
+	const [cvExists, setCvExists] = useState(false);
+	const [cvGenerating, setCvGenerating] = useState(false);
+	const [cvPreviewOpen, setCvPreviewOpen] = useState(false);
+	const [cvPreviewHtml, setCvPreviewHtml] = useState<string | null>(null);
+	const [cvPreviewLoading, setCvPreviewLoading] = useState(false);
+	const [cvRevealPending, setCvRevealPending] = useState(false);
+	const [cvError, setCvError] = useState<string | null>(null);
+
+	useEffect(() => {
+		setCvPreviewOpen(false);
+		setCvPreviewHtml(null);
+		setCvError(null);
+		if (!profileSlug) {
+			setCvExists(false);
+			return;
+		}
+		fetch(`/api/profiles/${profileSlug}/cv?language=${locale}`)
+			.then((res) => res.json())
+			.then((data) => setCvExists(!!data.exists))
+			.catch(() => setCvExists(false));
+	}, [profileSlug, locale]);
+
+	async function handleGenerateCv() {
+		if (!profileSlug) return;
+		setCvGenerating(true);
+		setCvError(null);
+		try {
+			const res = await fetch(`/api/profiles/${profileSlug}/cv`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ language: locale }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? t.profile.generateCvFailed);
+			setCvExists(true);
+			setCvPreviewHtml(null);
+			setCvPreviewOpen(false);
+		} catch (err) {
+			setCvError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setCvGenerating(false);
+		}
+	}
+
+	async function toggleCvPreview() {
+		if (!profileSlug) return;
+		if (cvPreviewOpen) {
+			setCvPreviewOpen(false);
+			return;
+		}
+		setCvError(null);
+		if (!cvPreviewHtml) {
+			setCvPreviewLoading(true);
+			try {
+				const res = await fetch(`/api/profiles/${profileSlug}/cv/preview?language=${locale}`);
+				const data = await res.json();
+				if (!res.ok) throw new Error(data.error ?? t.drawer.previewFailed);
+				setCvPreviewHtml(data.html);
+			} catch (err) {
+				setCvError(err instanceof Error ? err.message : String(err));
+				setCvPreviewLoading(false);
+				return;
+			}
+			setCvPreviewLoading(false);
+		}
+		setCvPreviewOpen(true);
+	}
+
+	async function handleRevealCv() {
+		if (!profileSlug) return;
+		setCvRevealPending(true);
+		setCvError(null);
+		try {
+			const res = await fetch(`/api/profiles/${profileSlug}/cv/reveal`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ language: locale }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? t.drawer.revealFailed);
+		} catch (err) {
+			setCvError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setCvRevealPending(false);
+		}
+	}
 
 	useEffect(() => {
 		if (!profileSlug) {
@@ -397,6 +483,44 @@ export default function ProfilePage() {
 					onChange={(skills_depth_notes) => update({ skills_depth_notes })}
 					t={t}
 				/>
+
+				<div className='form-section'>
+					<div className='form-section-head'>
+						<h2>{t.profile.generateCvTitle}</h2>
+						<span className='hint'>{t.profile.generateCvHint}</span>
+					</div>
+					<div className='form-section-body'>
+						{cvError && <div className='error-box'>{cvError}</div>}
+						<div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+							<button type='button' className='btn' onClick={handleGenerateCv} disabled={cvGenerating}>
+								{cvGenerating ? '…' : cvExists ? t.profile.regenerateCv : t.profile.generateCv}
+							</button>
+							{cvExists && (
+								<>
+									<button
+										type='button'
+										className='btn subtle'
+										onClick={toggleCvPreview}
+										disabled={cvPreviewLoading}
+									>
+										{cvPreviewLoading ? '…' : cvPreviewOpen ? t.drawer.hidePreview : t.drawer.preview}
+									</button>
+									<button
+										type='button'
+										className='btn subtle'
+										onClick={handleRevealCv}
+										disabled={cvRevealPending}
+									>
+										{cvRevealPending ? '…' : t.drawer.revealInFolder}
+									</button>
+								</>
+							)}
+						</div>
+						{cvPreviewOpen && cvPreviewHtml && (
+							<div className='docx-preview' dangerouslySetInnerHTML={{ __html: cvPreviewHtml }} />
+						)}
+					</div>
+				</div>
 
 				<div className='savebar' style={{ marginTop: 30 }}>
 					<button type='button' className='btn subtle' onClick={handleCancel} disabled={!dirty || saving}>

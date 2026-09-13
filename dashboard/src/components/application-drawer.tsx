@@ -28,11 +28,62 @@ export default function ApplicationDrawer({
 	const [pendingStatus, setPendingStatus] = useState(false);
 	const [notes, setNotes] = useState(application?.notes ?? '');
 	const [savedNotes, setSavedNotes] = useState(false);
+	const [previewDoc, setPreviewDoc] = useState<'cv' | 'letter' | null>(null);
+	const [previewHtml, setPreviewHtml] = useState<Partial<Record<'cv' | 'letter', string>>>({});
+	const [previewLoading, setPreviewLoading] = useState<'cv' | 'letter' | null>(null);
+	const [revealPending, setRevealPending] = useState<'cv' | 'letter' | null>(null);
+	const [docError, setDocError] = useState<string | null>(null);
 
 	useEffect(() => {
 		setNotes(application?.notes ?? '');
 		setTab('resume');
+		setPreviewDoc(null);
+		setPreviewHtml({});
+		setDocError(null);
 	}, [application?.id]);
+
+	async function togglePreview(doc: 'cv' | 'letter') {
+		if (!application) return;
+		if (previewDoc === doc) {
+			setPreviewDoc(null);
+			return;
+		}
+		setDocError(null);
+		if (!previewHtml[doc]) {
+			setPreviewLoading(doc);
+			try {
+				const res = await fetch(`/api/applications/${application.id}/preview?doc=${doc}`);
+				const data = await res.json();
+				if (!res.ok) throw new Error(data.error ?? t.drawer.previewFailed);
+				setPreviewHtml((prev) => ({ ...prev, [doc]: data.html }));
+			} catch (err) {
+				setDocError(err instanceof Error ? err.message : String(err));
+				setPreviewLoading(null);
+				return;
+			}
+			setPreviewLoading(null);
+		}
+		setPreviewDoc(doc);
+	}
+
+	async function handleReveal(doc: 'cv' | 'letter') {
+		if (!application) return;
+		setRevealPending(doc);
+		setDocError(null);
+		try {
+			const res = await fetch(`/api/applications/${application.id}/reveal`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ doc }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? t.drawer.revealFailed);
+		} catch (err) {
+			setDocError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setRevealPending(null);
+		}
+	}
 
 	async function handleStatusChange(newStatus: string) {
 		if (!application) return;
@@ -152,17 +203,46 @@ export default function ApplicationDrawer({
 
 							{tab === 'docs' && (
 								<div>
-									{application.cv_file_path && (
-										<div className='doc-link'>
-											<span className='ext'>DOCX</span>
-											<span className='name'>{fileName(application.cv_file_path)}</span>
-										</div>
-									)}
-									{application.cover_letter_file_path && (
-										<div className='doc-link'>
-											<span className='ext'>DOCX</span>
-											<span className='name'>{fileName(application.cover_letter_file_path)}</span>
-										</div>
+									{docError && <div className='error-box'>{docError}</div>}
+									{(
+										[
+											{ key: 'cv' as const, path: application.cv_file_path },
+											{ key: 'letter' as const, path: application.cover_letter_file_path },
+										] as const
+									).map(
+										({ key, path }) =>
+											path && (
+												<div key={key} style={{ marginBottom: 14 }}>
+													<div className='doc-link' style={{ marginBottom: 6 }}>
+														<span className='ext'>DOCX</span>
+														<span className='name'>{fileName(path)}</span>
+													</div>
+													<div style={{ display: 'flex', gap: 10 }}>
+														<button
+															type='button'
+															className='btn subtle'
+															onClick={() => togglePreview(key)}
+															disabled={previewLoading === key}
+														>
+															{previewLoading === key ? '…' : previewDoc === key ? t.drawer.hidePreview : t.drawer.preview}
+														</button>
+														<button
+															type='button'
+															className='btn subtle'
+															onClick={() => handleReveal(key)}
+															disabled={revealPending === key}
+														>
+															{revealPending === key ? '…' : t.drawer.revealInFolder}
+														</button>
+													</div>
+													{previewDoc === key && previewHtml[key] && (
+														<div
+															className='docx-preview'
+															dangerouslySetInnerHTML={{ __html: previewHtml[key]! }}
+														/>
+													)}
+												</div>
+											)
 									)}
 									{!application.cv_file_path && !application.cover_letter_file_path && (
 										<div className='panel-empty'>{t.drawer.noDocuments}</div>

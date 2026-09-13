@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.4.0] — 2026-09-13
+
+### Added
+
+- Preview generated CVs and cover letters directly in the app, and reveal
+  them in the OS file manager (Finder, Explorer, or the default file
+  manager on Linux) — no need to dig through the filesystem.
+- Generate a general CV straight from a profile, with no job offer needed.
+  It's a fixed file that regeneration always overwrites in place, handy for
+  handing out in person, job fairs, or a LinkedIn profile.
+
 ## [1.3.0] — 2026-09-07
 
 ### Added

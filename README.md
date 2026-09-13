@@ -1,6 +1,6 @@
 # Aiguillage
 
-[![Version](https://img.shields.io/badge/version-1.3.0-informational.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.4.0-informational.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A personal job-application tracker: paste a job posting, the app generates a

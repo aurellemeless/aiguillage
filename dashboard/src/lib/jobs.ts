@@ -7,7 +7,7 @@ import { Locale, parseLocale } from './i18n';
 import { ProfileData } from './profile-types';
 import { ProposedContent } from './types';
 
-function candidateNameSlug(profile: ProfileData): string {
+export function candidateNameSlug(profile: ProfileData): string {
 	return slugify(profile.identity?.name ?? 'candidat');
 }
 
