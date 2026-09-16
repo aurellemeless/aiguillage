@@ -14,7 +14,10 @@ CREATE TABLE IF NOT EXISTS applications (
     cv_file_path TEXT,
     cover_letter_file_path TEXT,
     cv_version INTEGER NOT NULL DEFAULT 1,
-    profile_slug TEXT NOT NULL DEFAULT 'default'
+    profile_slug TEXT NOT NULL DEFAULT 'default',
+    fit_score INTEGER,
+    fit_decision TEXT,
+    fit_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS status_history (

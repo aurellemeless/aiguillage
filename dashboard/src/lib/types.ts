@@ -26,11 +26,33 @@ export interface CoverLetterContent {
 	body: string[];
 }
 
+export type FitResult = 'excellent' | 'good' | 'weak' | 'missing' | 'not_required';
+export type FitDecision = 'apply' | 'maybe' | 'skip';
+export type FitCategoryKey = 'must_have' | 'nice_to_have' | 'domain_experience' | 'constraints' | 'seniority';
+
+export interface FitCriterion {
+	label: string;
+	result: FitResult;
+}
+
+export interface FitCategory {
+	category: FitCategoryKey;
+	criteria: FitCriterion[];
+}
+
+export interface JobFit {
+	score: number;
+	decision: FitDecision;
+	categories: FitCategory[];
+	reasons: string[];
+}
+
 export interface ProposedContent {
 	company: string;
 	role: string;
 	cv: CvContent;
 	cover_letter: CoverLetterContent;
+	fit: JobFit;
 }
 
 export interface Application {
@@ -50,6 +72,9 @@ export interface Application {
 	cover_letter_file_path: string | null;
 	cv_version: number;
 	profile_slug: string;
+	fit_score: number | null;
+	fit_decision: FitDecision | null;
+	fit_json: string | null;
 }
 
 export const STATUSES = [

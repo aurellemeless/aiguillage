@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ReviewForm from '@/components/review-form';
 import CvPreview from '@/components/cv-preview';
 import CopyablePath from '@/components/copyable-path';
+import FitCard from '@/components/fit-card';
 import { ProposedContent } from '@/lib/types';
 import { Locale, parseLocale } from '@/lib/i18n';
 import { useLocale } from '@/lib/locale-context';
@@ -260,6 +261,16 @@ function NouvelleCandidatureInner() {
 						<div className='scanline' />
 						<div>{t.wizard.analyzing}</div>
 					</div>
+				)}
+
+				{step === 'relecture' && content && content.fit && (
+					<FitCard
+						score={content.fit.score}
+						decision={content.fit.decision}
+						categories={content.fit.categories}
+						reasons={content.fit.reasons}
+						t={t}
+					/>
 				)}
 
 				{step === 'relecture' && content && (

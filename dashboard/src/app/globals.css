@@ -548,6 +548,102 @@ details.advanced .form-section-body {
 	background: var(--rust-soft);
 }
 
+/* ---------- fit card ---------- */
+.fit-card {
+	border: 1px solid var(--rule);
+	border-radius: 8px;
+	padding: 16px 18px;
+	margin-bottom: 20px;
+	background: var(--surface-2);
+}
+.fit-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px;
+	margin-bottom: 14px;
+	padding-bottom: 14px;
+	border-bottom: 1px solid var(--rule);
+}
+.fit-score {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
+.fit-score-value {
+	font-size: 28px;
+	font-weight: 600;
+}
+.fit-score-label {
+	color: var(--ink-faint);
+	font-size: 13px;
+}
+.fit-decision {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+	padding: 6px 12px;
+	border-radius: 999px;
+}
+.fit-decision-apply {
+	color: var(--green);
+	background: var(--green-soft);
+}
+.fit-decision-maybe {
+	color: var(--amber);
+	background: var(--amber-soft);
+}
+.fit-decision-skip {
+	color: var(--rust);
+	background: var(--rust-soft);
+}
+.fit-category {
+	margin-bottom: 12px;
+}
+.fit-category-label {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--ink-faint);
+	margin-bottom: 6px;
+}
+.fit-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 14px;
+}
+.fit-table td {
+	padding: 5px 0;
+	border-bottom: 1px solid var(--rule);
+}
+.fit-table tr:last-child td {
+	border-bottom: none;
+}
+.fit-result {
+	text-align: right;
+	white-space: nowrap;
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+}
+.fit-reasons ul {
+	margin: 0;
+	padding-left: 18px;
+}
+.fit-reasons li {
+	margin-bottom: 4px;
+}
+.fit-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 999px;
+}
+
 /* ---------- dashboard ---------- */
 .kpi-row {
 	display: grid;
@@ -773,6 +869,12 @@ details.advanced .form-section-body {
 .col.drag-over {
 	outline-color: var(--accent);
 	background: var(--accent-soft);
+}
+.card-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
 }
 .card .co {
 	font-weight: 600;

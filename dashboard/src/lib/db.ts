@@ -77,6 +77,9 @@ export interface NewApplication {
 	cv_file_path?: string | null;
 	cover_letter_file_path?: string | null;
 	profile_slug: string;
+	fit_score?: number | null;
+	fit_decision?: string | null;
+	fit_json?: string | null;
 }
 
 export function insertApplication(app: NewApplication): number {
@@ -87,8 +90,8 @@ export function insertApplication(app: NewApplication): number {
 	const result = database
 		.prepare(
 			`INSERT INTO applications
-				(company, role, offer_source, offer_text, application_date, status, cv_file_path, cover_letter_file_path, profile_slug, followup_delay_days, next_followup_date)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+				(company, role, offer_source, offer_text, application_date, status, cv_file_path, cover_letter_file_path, profile_slug, followup_delay_days, next_followup_date, fit_score, fit_decision, fit_json)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			app.company,
@@ -101,7 +104,10 @@ export function insertApplication(app: NewApplication): number {
 			app.cover_letter_file_path ?? null,
 			app.profile_slug,
 			delay,
-			nextFollowupDate
+			nextFollowupDate,
+			app.fit_score ?? null,
+			app.fit_decision ?? null,
+			app.fit_json ?? null
 		);
 	const applicationId = Number(result.lastInsertRowid);
 	recordStatusChange(applicationId, app.status);

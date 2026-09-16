@@ -1,13 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ApplicationWithHistory } from '@/lib/db';
 import { STATUSES } from '@/lib/types';
 import { formatDate, formatDateTime } from '@/lib/status';
 import { statusLabel } from '@/lib/i18n';
 import { useLocale } from '@/lib/locale-context';
+import { parseFitDetails } from '@/lib/fit';
 import StatusStamp from '@/components/status-stamp';
+import FitCard from '@/components/fit-card';
 
 type Tab = 'resume' | 'offer' | 'docs' | 'followup' | 'hist' | 'notes';
 
@@ -193,6 +195,8 @@ export default function ApplicationDrawer({
 		setTimeout(() => setDraftCopied(false), 1500);
 	}
 
+	const fitDetails = useMemo(() => parseFitDetails(application?.fit_json ?? null), [application?.fit_json]);
+
 	const show = !!application;
 
 	return (
@@ -235,6 +239,15 @@ export default function ApplicationDrawer({
 						<div className='drawer-body'>
 							{tab === 'resume' && (
 								<div>
+									{application.fit_score !== null && application.fit_decision && fitDetails && (
+										<FitCard
+											score={application.fit_score}
+											decision={application.fit_decision}
+											categories={fitDetails.categories}
+											reasons={fitDetails.reasons}
+											t={t}
+										/>
+									)}
 									<div className='kv'>
 										<span className='k'>{t.drawer.status}</span>
 										<span className='v'>

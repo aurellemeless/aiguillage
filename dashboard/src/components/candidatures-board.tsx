@@ -10,6 +10,7 @@ import { dayPrefix, statusLabel } from '@/lib/i18n';
 import { useLocale } from '@/lib/locale-context';
 import StatusStamp from '@/components/status-stamp';
 import ApplicationDrawer from '@/components/application-drawer';
+import { FitBadge } from '@/components/fit-card';
 
 const CLOSED_STATUSES = new Set(['rejected', 'no_response_abandoned', 'offer_received']);
 
@@ -140,7 +141,12 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 									}}
 									onClick={() => setOpenId(app.id)}
 								>
-									<span className='co'>{app.company}</span>
+									<div className='card-top'>
+										<span className='co'>{app.company}</span>
+										{app.fit_score !== null && app.fit_decision && (
+											<FitBadge score={app.fit_score} decision={app.fit_decision} />
+										)}
+									</div>
 									<span className='role'>{app.role}</span>
 									<div className='meta'>
 										<StatusStamp status={app.status} />
@@ -162,6 +168,7 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 								<th>{t.candidatures.colRole}</th>
 								<th>{t.candidatures.colAppliedOn}</th>
 								<th>{t.candidatures.colStatus}</th>
+								<th>{t.fit.colFit}</th>
 								<th>{t.candidatures.colFollowUp}</th>
 							</tr>
 						</thead>
@@ -175,6 +182,13 @@ export default function CandidaturesBoard({ applications }: { applications: Appl
 									<td className='date'>{formatDate(app.application_date, locale)}</td>
 									<td>
 										<StatusStamp status={app.status} />
+									</td>
+									<td>
+										{app.fit_score !== null && app.fit_decision ? (
+											<FitBadge score={app.fit_score} decision={app.fit_decision} />
+										) : (
+											'—'
+										)}
 									</td>
 									<td>
 										{isFollowupDue(app.status, app.application_date, app.followup_delay_days, app.next_followup_date) ? (

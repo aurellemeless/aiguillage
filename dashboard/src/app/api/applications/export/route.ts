@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import { NextResponse } from 'next/server';
 import { listApplicationsWithHistory } from '@/lib/db';
 import { getDict, statusLabel } from '@/lib/i18n';
+import { fitDecisionLabel } from '@/lib/fit';
 import { getServerLocale } from '@/lib/server-locale';
 import { getServerProfileSlug } from '@/lib/server-profile';
 
@@ -31,6 +32,8 @@ export async function GET() {
 		{ header: t.export.colCompany, key: 'company', width: 24 },
 		{ header: t.export.colRole, key: 'role', width: 28 },
 		{ header: t.export.colStatus, key: 'status', width: 20 },
+		{ header: t.export.colFitScore, key: 'fitScore', width: 10 },
+		{ header: t.export.colFitDecision, key: 'fitDecision', width: 14 },
 		{ header: t.export.colSource, key: 'source', width: 16 },
 		{ header: t.export.colAppliedOn, key: 'appliedOn', width: 14 },
 		{ header: t.export.colOfferDate, key: 'offerDate', width: 14 },
@@ -51,6 +54,8 @@ export async function GET() {
 			company: app.company,
 			role: app.role,
 			status: statusLabel(app.status, locale),
+			fitScore: app.fit_score ?? '',
+			fitDecision: app.fit_decision ? fitDecisionLabel(t, app.fit_decision) : '',
 			source: app.offer_source ?? '',
 			appliedOn: toDate(app.application_date),
 			offerDate: toDate(app.offer_date),

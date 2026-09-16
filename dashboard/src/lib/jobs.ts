@@ -65,6 +65,9 @@ export async function runGeneration(jobId: number, profileSlug: string): Promise
 			cv_file_path: cvResult.path,
 			cover_letter_file_path: letterResult?.path ?? null,
 			profile_slug: profileSlug,
+			fit_score: content.fit?.score ?? null,
+			fit_decision: content.fit?.decision ?? null,
+			fit_json: content.fit ? JSON.stringify({ categories: content.fit.categories, reasons: content.fit.reasons }) : null,
 		});
 
 		let secondaryCvPath: string | null = null;
