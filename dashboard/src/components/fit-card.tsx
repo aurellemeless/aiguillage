@@ -3,6 +3,7 @@ import {
 	FIT_CATEGORY_ORDER,
 	FIT_DECISION_ICON,
 	FIT_RESULT_ICON,
+	FitTone,
 	fitCategoryLabel,
 	fitCategoryScore,
 	fitCategoryTone,
@@ -60,6 +61,64 @@ function ScoreMeter({ score, decision, t }: { score: number; decision: FitDecisi
 	);
 }
 
+const RADAR_CENTER = 120;
+const RADAR_MAX_RADIUS = 78;
+const RADAR_GRID_LEVELS = [0.25, 0.5, 0.75, 1];
+
+function polarPoint(angleDeg: number, radius: number): { x: number; y: number } {
+	const rad = ((angleDeg - 90) * Math.PI) / 180;
+	return { x: RADAR_CENTER + radius * Math.cos(rad), y: RADAR_CENTER + radius * Math.sin(rad) };
+}
+
+function polygonPoints(angleStep: number, n: number, radius: number): string {
+	return Array.from({ length: n }, (_, i) => {
+		const p = polarPoint(i * angleStep, radius);
+		return `${p.x},${p.y}`;
+	}).join(' ');
+}
+
+// A pentagon-shaped silhouette of the 5 categories — the "at a glance" read
+// of which dimensions are strong vs. weak; the bars below carry the exact
+// numbers and the individual criteria.
+function RadarChart({ categories, tone, t }: { categories: FitCategory[]; tone: FitTone; t: Dict }) {
+	const n = categories.length;
+	if (n < 3) return null;
+	const angleStep = 360 / n;
+
+	const axes = categories.map((cat, i) => {
+		const angle = i * angleStep;
+		const score = fitCategoryScore(cat.criteria);
+		const vertex = polarPoint(angle, (score / 100) * RADAR_MAX_RADIUS);
+		const labelPos = polarPoint(angle, RADAR_MAX_RADIUS + 26);
+		const spokeEnd = polarPoint(angle, RADAR_MAX_RADIUS);
+		return { category: cat.category, vertex, labelPos, spokeEnd };
+	});
+
+	return (
+		<svg viewBox='0 0 240 240' width='190' height='190' className={`fit-radar fit-tone-${tone}`}>
+			{RADAR_GRID_LEVELS.map((level) => (
+				<polygon key={level} points={polygonPoints(angleStep, n, level * RADAR_MAX_RADIUS)} className='fit-radar-grid' />
+			))}
+			{axes.map((a, i) => (
+				<line key={i} x1={RADAR_CENTER} y1={RADAR_CENTER} x2={a.spokeEnd.x} y2={a.spokeEnd.y} className='fit-radar-spoke' />
+			))}
+			<polygon points={axes.map((a) => `${a.vertex.x},${a.vertex.y}`).join(' ')} className='fit-radar-shape' />
+			{axes.map((a, i) => (
+				<circle key={i} cx={a.vertex.x} cy={a.vertex.y} r={4} className='fit-radar-dot' />
+			))}
+			{axes.map((a, i) => {
+				const dx = a.labelPos.x - RADAR_CENTER;
+				const anchor = Math.abs(dx) < 4 ? 'middle' : dx > 0 ? 'start' : 'end';
+				return (
+					<text key={i} x={a.labelPos.x} y={a.labelPos.y} textAnchor={anchor} dominantBaseline='middle' className='fit-radar-label'>
+						{fitCategoryLabel(t, a.category)}
+					</text>
+				);
+			})}
+		</svg>
+	);
+}
+
 function CategoryRow({ category, t }: { category: FitCategory; t: Dict }) {
 	const score = fitCategoryScore(category.criteria);
 	const tone = fitCategoryTone(category.criteria);
@@ -102,15 +161,19 @@ export default function FitCard({
 	const byKey = new Map(categories.map((c) => [c.category, c]));
 	const ordered = FIT_CATEGORY_ORDER.map((key) => byKey.get(key)).filter((c): c is FitCategory => !!c && c.criteria.length > 0);
 
+	const tone = fitDecisionTone(decision);
+
 	return (
 		<div className='fit-card'>
 			<div className='fit-head'>
 				<ScoreMeter score={score} decision={decision} t={t} />
-				<div className='fit-categories'>
-					{ordered.map((cat) => (
-						<CategoryRow category={cat} t={t} key={cat.category} />
-					))}
-				</div>
+				<RadarChart categories={ordered} tone={tone} t={t} />
+			</div>
+
+			<div className='fit-categories'>
+				{ordered.map((cat) => (
+					<CategoryRow category={cat} t={t} key={cat.category} />
+				))}
 			</div>
 
 			{reasons.length > 0 && (
