@@ -172,6 +172,9 @@ const dict = {
 			reasonsTitle: 'Pourquoi ?',
 			none: 'Aucune évaluation de correspondance pour cette candidature.',
 			colFit: 'Fit',
+			toneGood: 'Solide',
+			toneWarning: 'À surveiller',
+			toneDanger: 'Point bloquant',
 		},
 		wizard: {
 			title: 'Nouvelle candidature',
@@ -466,6 +469,9 @@ const dict = {
 			reasonsTitle: 'Why?',
 			none: 'No match assessment for this application.',
 			colFit: 'Fit',
+			toneGood: 'Solid',
+			toneWarning: 'Worth watching',
+			toneDanger: 'Blocking point',
 		},
 		wizard: {
 			title: 'New application',

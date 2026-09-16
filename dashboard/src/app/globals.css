@@ -549,86 +549,140 @@ details.advanced .form-section-body {
 }
 
 /* ---------- fit card ---------- */
+/* Three-tone severity system, shared by the meter, the category bars and the
+   criterion chips so color always means the same thing across the card. Each
+   tone sets --fit-tone (the mark) and --fit-tone-soft (a lighter step of the
+   same hue — same ramp for track and fill, per the meter pattern). */
+.fit-tone-good {
+	--fit-tone: var(--green);
+	--fit-tone-soft: var(--green-soft);
+}
+.fit-tone-warning {
+	--fit-tone: var(--amber);
+	--fit-tone-soft: var(--amber-soft);
+}
+.fit-tone-danger {
+	--fit-tone: var(--rust);
+	--fit-tone-soft: var(--rust-soft);
+}
+.fit-tone-neutral {
+	--fit-tone: var(--ink-faint);
+	--fit-tone-soft: var(--surface-2);
+}
+
 .fit-card {
 	border: 1px solid var(--rule);
-	border-radius: 8px;
-	padding: 16px 18px;
+	border-radius: 10px;
+	padding: 18px 20px;
 	margin-bottom: 20px;
 	background: var(--surface-2);
 }
 .fit-head {
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 14px;
-	margin-bottom: 14px;
-	padding-bottom: 14px;
+	gap: 24px;
+	padding-bottom: 16px;
+	margin-bottom: 16px;
 	border-bottom: 1px solid var(--rule);
 }
-.fit-score {
+.fit-meter {
 	display: flex;
-	align-items: baseline;
-	gap: 8px;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
 }
-.fit-score-value {
-	font-size: 28px;
-	font-weight: 600;
+.fit-ring-track {
+	stroke: var(--fit-tone-soft);
 }
-.fit-score-label {
-	color: var(--ink-faint);
-	font-size: 13px;
+.fit-ring-fill {
+	stroke: var(--fit-tone);
+	transition: stroke-dashoffset 0.4s ease;
+}
+.fit-ring-value {
+	font-size: 20px;
+	font-weight: 700;
+	fill: var(--ink);
+}
+.fit-ring-label {
+	font-size: 9px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	fill: var(--ink-faint);
 }
 .fit-decision {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	font-weight: 600;
-	padding: 6px 12px;
+	font-size: 13px;
+	padding: 5px 12px;
 	border-radius: 999px;
+	color: var(--fit-tone);
+	background: var(--fit-tone-soft);
+	white-space: nowrap;
 }
-.fit-decision-apply {
-	color: var(--green);
-	background: var(--green-soft);
+.fit-categories {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
 }
-.fit-decision-maybe {
-	color: var(--amber);
-	background: var(--amber-soft);
-}
-.fit-decision-skip {
-	color: var(--rust);
-	background: var(--rust-soft);
-}
-.fit-category {
-	margin-bottom: 12px;
+.fit-category-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+	margin-bottom: 5px;
 }
 .fit-category-label {
 	font-size: 12px;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
 	color: var(--ink-faint);
-	margin-bottom: 6px;
 }
-.fit-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 14px;
+.fit-category-tone {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--fit-tone);
 }
-.fit-table td {
-	padding: 5px 0;
-	border-bottom: 1px solid var(--rule);
+.fit-bar-track {
+	height: 7px;
+	border-radius: 999px;
+	background: var(--fit-tone-soft);
+	overflow: hidden;
 }
-.fit-table tr:last-child td {
-	border-bottom: none;
+.fit-bar-fill {
+	height: 100%;
+	border-radius: 999px;
+	background: var(--fit-tone);
 }
-.fit-result {
-	text-align: right;
-	white-space: nowrap;
+.fit-chips {
 	display: flex;
-	justify-content: flex-end;
+	flex-wrap: wrap;
 	gap: 6px;
+	margin-top: 8px;
+}
+.fit-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 12px;
+	padding: 4px 9px 4px 7px;
+	border-radius: 999px;
+	background: var(--surface);
+	border: 1px solid var(--fit-tone-soft);
+	color: var(--ink-soft);
+}
+.fit-chip-icon {
+	font-size: 11px;
+}
+.fit-chip-result {
+	color: var(--fit-tone);
+	font-weight: 600;
 }
 .fit-reasons ul {
-	margin: 0;
+	margin: 8px 0 0;
 	padding-left: 18px;
 }
 .fit-reasons li {
@@ -642,6 +696,15 @@ details.advanced .form-section-body {
 	font-weight: 600;
 	padding: 2px 8px;
 	border-radius: 999px;
+	color: var(--fit-tone);
+	background: var(--fit-tone-soft);
+}
+
+@media (max-width: 640px) {
+	.fit-head {
+		flex-direction: column;
+		align-items: center;
+	}
 }
 
 /* ---------- dashboard ---------- */
