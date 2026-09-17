@@ -35,6 +35,29 @@ export function formatDate(dateStr: string | null, locale: Locale = 'fr'): strin
 	return d.toLocaleDateString(intlLocale(locale), { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+export function relativeTime(dateStr: string | null, locale: Locale = 'fr'): string {
+	if (!dateStr) return '—';
+	const d = new Date(dateStr);
+	if (Number.isNaN(d.getTime())) return dateStr;
+	const rtf = new Intl.RelativeTimeFormat(intlLocale(locale), { numeric: 'auto' });
+	const diffSeconds = (d.getTime() - Date.now()) / 1000;
+	const divisions: [number, Intl.RelativeTimeFormatUnit][] = [
+		[60, 'second'],
+		[60, 'minute'],
+		[24, 'hour'],
+		[7, 'day'],
+		[4.34524, 'week'],
+		[12, 'month'],
+		[Infinity, 'year'],
+	];
+	let duration = diffSeconds;
+	for (const [amount, unit] of divisions) {
+		if (Math.abs(duration) < amount) return rtf.format(Math.round(duration), unit);
+		duration /= amount;
+	}
+	return rtf.format(Math.round(duration), 'year');
+}
+
 export function formatDateTime(dateStr: string, locale: Locale = 'fr'): string {
 	const d = new Date(dateStr);
 	if (Number.isNaN(d.getTime())) return dateStr;

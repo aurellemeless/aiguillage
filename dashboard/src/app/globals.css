@@ -728,6 +728,98 @@ details.advanced .form-section-body {
 	background: var(--fit-tone-soft);
 }
 
+/* ---------- offer discovery ---------- */
+.offer-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.offer-row {
+	background: var(--surface);
+	border: 1px solid var(--rule);
+	border-radius: 8px;
+	box-shadow: var(--shadow);
+}
+.offer-row-main {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 14px 16px;
+	flex-wrap: wrap;
+}
+.offer-row-main .who {
+	flex: 1;
+	min-width: 220px;
+}
+.offer-row-main .who .co {
+	font-weight: 600;
+	font-size: 14px;
+}
+.offer-row-main .who .role {
+	font-size: 13px;
+	color: var(--ink-soft);
+	margin-top: 1px;
+}
+.offer-meta {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 6px;
+	flex-wrap: wrap;
+}
+.source-tag {
+	font-family: var(--font-mono), monospace;
+	font-size: 10px;
+	letter-spacing: 0.03em;
+	background: var(--accent-soft);
+	color: var(--accent);
+	padding: 2px 7px;
+	border-radius: 3px;
+	text-transform: uppercase;
+}
+.offer-loc,
+.offer-date {
+	font-size: 12px;
+	color: var(--ink-faint);
+}
+.offer-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: none;
+}
+.offer-detail {
+	border-top: 1px solid var(--rule);
+	padding: 18px 16px 20px;
+	background: var(--surface-2);
+	border-radius: 0 0 8px 8px;
+}
+.offer-detail-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 16px;
+}
+.checkbox-row {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	padding: 9px 0;
+	font-size: 13.5px;
+}
+.checkbox-row input {
+	width: 15px;
+	height: 15px;
+	accent-color: var(--accent);
+}
+.checkbox-row .src-name {
+	font-weight: 500;
+}
+.checkbox-row .src-hint {
+	font-size: 11.5px;
+	color: var(--ink-faint);
+}
+
 /* ---------- dashboard ---------- */
 .kpi-row {
 	display: grid;

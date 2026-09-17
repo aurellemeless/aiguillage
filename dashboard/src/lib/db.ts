@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import { Application } from './types';
+import { Application, FitDecision } from './types';
 import { computeNextFollowupDate } from './followup';
 
 const DB_PATH = path.join(process.cwd(), '..', 'data', 'applications.db');
@@ -184,6 +184,112 @@ export function setDefaultFollowupDelay(profileSlug: string, days: number): void
 		.run(profileSlug, days);
 }
 
+export type ScanStatus = 'scanning' | 'done' | 'error';
+
+export interface ProfileSearchSettings {
+	keywords: string[];
+	location: string | null;
+	min_fit_score: number;
+	sources: string[];
+	last_scan_at: string | null;
+	last_scan_status: ScanStatus | null;
+	last_scan_error: string | null;
+	last_scan_found: number | null;
+	last_scan_new: number | null;
+}
+
+interface SearchSettingsRow {
+	search_keywords: string;
+	search_location: string | null;
+	search_min_fit_score: number;
+	search_sources: string;
+	last_scan_at: string | null;
+	last_scan_status: ScanStatus | null;
+	last_scan_error: string | null;
+	last_scan_found: number | null;
+	last_scan_new: number | null;
+}
+
+function parseJsonArray(value: string | null | undefined): string[] {
+	if (!value) return [];
+	try {
+		const parsed = JSON.parse(value);
+		return Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'string') : [];
+	} catch {
+		return [];
+	}
+}
+
+export function getProfileSearchSettings(profileSlug: string): ProfileSearchSettings {
+	const database = getDb();
+	const row = database
+		.prepare(
+			`SELECT search_keywords, search_location, search_min_fit_score, search_sources,
+			        last_scan_at, last_scan_status, last_scan_error, last_scan_found, last_scan_new
+			 FROM profile_settings WHERE profile_slug = ?`
+		)
+		.get(profileSlug) as SearchSettingsRow | undefined;
+
+	if (!row) {
+		return { keywords: [], location: null, min_fit_score: 70, sources: ['france_travail'], last_scan_at: null, last_scan_status: null, last_scan_error: null, last_scan_found: null, last_scan_new: null };
+	}
+	return {
+		keywords: parseJsonArray(row.search_keywords),
+		location: row.search_location,
+		min_fit_score: row.search_min_fit_score,
+		sources: parseJsonArray(row.search_sources),
+		last_scan_at: row.last_scan_at,
+		last_scan_status: row.last_scan_status,
+		last_scan_error: row.last_scan_error,
+		last_scan_found: row.last_scan_found,
+		last_scan_new: row.last_scan_new,
+	};
+}
+
+export function setProfileSearchSettings(
+	profileSlug: string,
+	settings: { keywords: string[]; location: string | null; minFitScore: number; sources: string[] }
+): void {
+	const database = getDb();
+	database
+		.prepare(
+			`INSERT INTO profile_settings (profile_slug, search_keywords, search_location, search_min_fit_score, search_sources)
+			 VALUES (?, ?, ?, ?, ?)
+			 ON CONFLICT(profile_slug) DO UPDATE SET
+			   search_keywords = excluded.search_keywords,
+			   search_location = excluded.search_location,
+			   search_min_fit_score = excluded.search_min_fit_score,
+			   search_sources = excluded.search_sources`
+		)
+		.run(profileSlug, JSON.stringify(settings.keywords), settings.location, settings.minFitScore, JSON.stringify(settings.sources));
+}
+
+export function recordScanStart(profileSlug: string): void {
+	const database = getDb();
+	database
+		.prepare(
+			`INSERT INTO profile_settings (profile_slug, last_scan_at, last_scan_status, last_scan_error)
+			 VALUES (?, ?, 'scanning', NULL)
+			 ON CONFLICT(profile_slug) DO UPDATE SET last_scan_at = excluded.last_scan_at, last_scan_status = 'scanning', last_scan_error = NULL`
+		)
+		.run(profileSlug, new Date().toISOString());
+}
+
+export function recordScanResult(profileSlug: string, result: { found: number; new: number } | { error: string }): void {
+	const database = getDb();
+	if ('error' in result) {
+		database
+			.prepare(`UPDATE profile_settings SET last_scan_status = 'error', last_scan_error = ? WHERE profile_slug = ?`)
+			.run(result.error, profileSlug);
+		return;
+	}
+	database
+		.prepare(
+			`UPDATE profile_settings SET last_scan_status = 'done', last_scan_error = NULL, last_scan_found = ?, last_scan_new = ? WHERE profile_slug = ?`
+		)
+		.run(result.found, result.new, profileSlug);
+}
+
 export function updateStatus(applicationId: number, status: string, profileSlug: string): void {
 	const database = getDb();
 	database
@@ -318,4 +424,119 @@ export function listJobs(profileSlug: string): WizardJobRow[] {
 		.prepare('SELECT * FROM wizard_jobs WHERE profile_slug = ? ORDER BY created_at DESC')
 		.all(profileSlug) as unknown as WizardJobRow[];
 	return rows.map((row) => ({ ...row }));
+}
+
+export type OfferStatus = 'new' | 'dismissed' | 'applied';
+
+export interface DiscoveredOffer {
+	id: number;
+	profile_slug: string;
+	source: string;
+	external_id: string;
+	url: string | null;
+	title: string;
+	company: string | null;
+	location: string | null;
+	contract_type: string | null;
+	posted_date: string | null;
+	raw_text: string;
+	fit_score: number;
+	fit_decision: FitDecision;
+	fit_json: string;
+	status: OfferStatus;
+	application_id: number | null;
+	discovered_at: string;
+}
+
+export function offerExists(profileSlug: string, source: string, externalId: string): boolean {
+	const database = getDb();
+	const row = database
+		.prepare('SELECT 1 FROM discovered_offers WHERE profile_slug = ? AND source = ? AND external_id = ?')
+		.get(profileSlug, source, externalId);
+	return !!row;
+}
+
+export interface NewDiscoveredOffer {
+	profile_slug: string;
+	source: string;
+	external_id: string;
+	url: string | null;
+	title: string;
+	company: string | null;
+	location: string | null;
+	contract_type: string | null;
+	posted_date: string | null;
+	raw_text: string;
+	fit_score: number;
+	fit_decision: FitDecision;
+	fit_json: string;
+}
+
+export function insertDiscoveredOffer(offer: NewDiscoveredOffer): void {
+	const database = getDb();
+	database
+		.prepare(
+			`INSERT INTO discovered_offers
+				(profile_slug, source, external_id, url, title, company, location, contract_type, posted_date, raw_text, fit_score, fit_decision, fit_json, status, discovered_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)
+			ON CONFLICT(profile_slug, source, external_id) DO NOTHING`
+		)
+		.run(
+			offer.profile_slug,
+			offer.source,
+			offer.external_id,
+			offer.url,
+			offer.title,
+			offer.company,
+			offer.location,
+			offer.contract_type,
+			offer.posted_date,
+			offer.raw_text,
+			offer.fit_score,
+			offer.fit_decision,
+			offer.fit_json,
+			new Date().toISOString()
+		);
+}
+
+// "new" respects the profile's *current* min-fit-score setting (raising or
+// lowering the threshold later re-surfaces already-fetched offers without a
+// re-scan); "dismissed"/"applied" are explicit user actions and always show.
+export function listDiscoveredOffers(profileSlug: string, status: OfferStatus): DiscoveredOffer[] {
+	const database = getDb();
+	if (status === 'new') {
+		const minScore = getProfileSearchSettings(profileSlug).min_fit_score;
+		return database
+			.prepare(
+				`SELECT * FROM discovered_offers WHERE profile_slug = ? AND status = 'new' AND fit_score >= ? ORDER BY fit_score DESC, discovered_at DESC`
+			)
+			.all(profileSlug, minScore) as unknown as DiscoveredOffer[];
+	}
+	return database
+		.prepare(`SELECT * FROM discovered_offers WHERE profile_slug = ? AND status = ? ORDER BY discovered_at DESC`)
+		.all(profileSlug, status) as unknown as DiscoveredOffer[];
+}
+
+export function countNewDiscoveredOffers(profileSlug: string): number {
+	return listDiscoveredOffers(profileSlug, 'new').length;
+}
+
+export function getDiscoveredOffer(id: number, profileSlug: string): DiscoveredOffer | undefined {
+	const database = getDb();
+	const row = database
+		.prepare('SELECT * FROM discovered_offers WHERE id = ? AND profile_slug = ?')
+		.get(id, profileSlug) as DiscoveredOffer | undefined;
+	return row ? { ...row } : undefined;
+}
+
+export function updateDiscoveredOfferStatus(
+	id: number,
+	profileSlug: string,
+	status: OfferStatus,
+	applicationId?: number
+): void {
+	const database = getDb();
+	database
+		.prepare('UPDATE discovered_offers SET status = ?, application_id = ? WHERE id = ? AND profile_slug = ?')
+		.run(status, applicationId ?? null, id, profileSlug);
 }
