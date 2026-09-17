@@ -24,6 +24,21 @@ export function isFranceTravailConfigured(): boolean {
 	return !!process.env.FRANCE_TRAVAIL_CLIENT_ID && !!process.env.FRANCE_TRAVAIL_CLIENT_SECRET;
 }
 
+// `res.ok` is true for 204 No Content too (a real response France Travail
+// sends for an empty result set), and `res.json()` throws an opaque
+// "Unexpected end of JSON input" on an empty body — parse defensively so an
+// empty-but-successful response reads as "nothing here", and a genuinely
+// malformed body surfaces the raw text instead of a cryptic native error.
+async function safeJson(res: Response): Promise<unknown> {
+	const text = await res.text();
+	if (!text.trim()) return null;
+	try {
+		return JSON.parse(text);
+	} catch {
+		throw new Error(`France Travail : réponse inattendue (HTTP ${res.status}) : ${text.slice(0, 300)}`);
+	}
+}
+
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
@@ -48,8 +63,12 @@ async function getAccessToken(): Promise<string> {
 	if (!res.ok) {
 		throw new Error(`France Travail : échec de l'authentification (HTTP ${res.status}).`);
 	}
-	const data = await res.json();
-	cachedToken = { value: data.access_token, expiresAt: Date.now() + (data.expires_in ?? 1200) * 1000 };
+	const data = await safeJson(res);
+	if (!data || typeof data !== 'object' || typeof (data as Record<string, unknown>).access_token !== 'string') {
+		throw new Error("France Travail : réponse d'authentification invalide (pas de jeton renvoyé).");
+	}
+	const { access_token: accessToken, expires_in: expiresIn } = data as { access_token: string; expires_in?: number };
+	cachedToken = { value: accessToken, expiresAt: Date.now() + (expiresIn ?? 1200) * 1000 };
 	return cachedToken.value;
 }
 
@@ -109,11 +128,16 @@ export async function searchOffers({ keywords, location, max = 20 }: SearchParam
 	const res = await fetch(`${SEARCH_URL}?${params.toString()}`, {
 		headers: { Authorization: `Bearer ${token}` },
 	});
-	// The search endpoint returns 206 (partial content) for a normal paginated result.
+	// The search endpoint uses 206 (partial content) for a normal paginated
+	// result and 204 (no content, empty body) when nothing matches at all.
+	if (res.status === 204) return [];
 	if (!res.ok && res.status !== 206) {
 		throw new Error(`France Travail : échec de la recherche (HTTP ${res.status}).`);
 	}
-	const data = await res.json();
-	const results = Array.isArray(data.resultats) ? data.resultats : [];
+	const data = await safeJson(res);
+	const results =
+		data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).resultats)
+			? ((data as Record<string, unknown>).resultats as Record<string, unknown>[])
+			: [];
 	return results.map(normalize).filter((o: RawOffer | null): o is RawOffer => o !== null);
 }
