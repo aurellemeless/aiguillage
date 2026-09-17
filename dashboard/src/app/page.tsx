@@ -31,7 +31,7 @@ export default async function DashboardPage() {
 	const responseRate = sent > 0 ? Math.round((responded / sent) * 100) : 0;
 
 	const toFollowUp = applications
-		.filter((a) => isFollowupDue(a.status, a.application_date, a.followup_delay_days))
+		.filter((a) => isFollowupDue(a.status, a.application_date, a.followup_delay_days, a.next_followup_date))
 		.sort((a, b) => (a.application_date ?? '').localeCompare(b.application_date ?? ''));
 
 	const recentActivity = applications

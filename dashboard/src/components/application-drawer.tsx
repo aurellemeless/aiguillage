@@ -1,15 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ApplicationWithHistory } from '@/lib/db';
 import { STATUSES } from '@/lib/types';
 import { formatDate, formatDateTime } from '@/lib/status';
 import { statusLabel } from '@/lib/i18n';
 import { useLocale } from '@/lib/locale-context';
+import { parseFitDetails } from '@/lib/fit';
 import StatusStamp from '@/components/status-stamp';
+import FitCard from '@/components/fit-card';
 
-type Tab = 'resume' | 'offer' | 'docs' | 'hist' | 'notes';
+type Tab = 'resume' | 'offer' | 'docs' | 'followup' | 'hist' | 'notes';
 
 function fileName(path: string): string {
 	return path.split('/').pop() ?? path;
@@ -34,12 +36,26 @@ export default function ApplicationDrawer({
 	const [revealPending, setRevealPending] = useState<'cv' | 'letter' | null>(null);
 	const [docError, setDocError] = useState<string | null>(null);
 
+	const [followupNote, setFollowupNote] = useState('');
+	const [followupPending, setFollowupPending] = useState(false);
+	const [followupError, setFollowupError] = useState<string | null>(null);
+	const [delayDays, setDelayDays] = useState(application?.followup_delay_days ?? 10);
+	const [delaySaving, setDelaySaving] = useState(false);
+	const [delaySaved, setDelaySaved] = useState(false);
+	const [draftText, setDraftText] = useState<string | null>(null);
+	const [draftLoading, setDraftLoading] = useState(false);
+	const [draftCopied, setDraftCopied] = useState(false);
+
 	useEffect(() => {
 		setNotes(application?.notes ?? '');
 		setTab('resume');
 		setPreviewDoc(null);
 		setPreviewHtml({});
 		setDocError(null);
+		setFollowupNote('');
+		setFollowupError(null);
+		setDelayDays(application?.followup_delay_days ?? 10);
+		setDraftText(null);
 	}, [application?.id]);
 
 	async function togglePreview(doc: 'cv' | 'letter') {
@@ -109,6 +125,78 @@ export default function ApplicationDrawer({
 		setTimeout(() => setSavedNotes(false), 1500);
 	}
 
+	async function handleMarkFollowedUp() {
+		if (!application) return;
+		setFollowupPending(true);
+		setFollowupError(null);
+		try {
+			const res = await fetch(`/api/applications/${application.id}/followups`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ note: followupNote }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? t.drawer.followupMarkFailed);
+			setFollowupNote('');
+			router.refresh();
+		} catch (err) {
+			setFollowupError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setFollowupPending(false);
+		}
+	}
+
+	async function handleDelayBlur() {
+		if (!application || delayDays === application.followup_delay_days) return;
+		setDelaySaving(true);
+		setFollowupError(null);
+		try {
+			const res = await fetch(`/api/applications/${application.id}/followup-delay`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ days: delayDays }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? t.drawer.followupDelayFailed);
+			setDelaySaved(true);
+			router.refresh();
+			setTimeout(() => setDelaySaved(false), 1500);
+		} catch (err) {
+			setFollowupError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setDelaySaving(false);
+		}
+	}
+
+	async function handleGenerateDraft() {
+		if (!application) return;
+		setDraftLoading(true);
+		setFollowupError(null);
+		try {
+			const res = await fetch(`/api/applications/${application.id}/followup-draft`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ language: locale }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? t.drawer.followupDraftFailed);
+			setDraftText(data.text);
+		} catch (err) {
+			setFollowupError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setDraftLoading(false);
+		}
+	}
+
+	async function handleCopyDraft() {
+		if (!draftText) return;
+		await navigator.clipboard.writeText(draftText);
+		setDraftCopied(true);
+		setTimeout(() => setDraftCopied(false), 1500);
+	}
+
+	const fitDetails = useMemo(() => parseFitDetails(application?.fit_json ?? null), [application?.fit_json]);
+
 	const show = !!application;
 
 	return (
@@ -137,6 +225,9 @@ export default function ApplicationDrawer({
 								<button className={`tab ${tab === 'docs' ? 'active' : ''}`} onClick={() => setTab('docs')}>
 									{t.drawer.tabDocs}
 								</button>
+								<button className={`tab ${tab === 'followup' ? 'active' : ''}`} onClick={() => setTab('followup')}>
+									{t.drawer.tabFollowup}
+								</button>
 								<button className={`tab ${tab === 'hist' ? 'active' : ''}`} onClick={() => setTab('hist')}>
 									{t.drawer.tabHistory}
 								</button>
@@ -148,6 +239,15 @@ export default function ApplicationDrawer({
 						<div className='drawer-body'>
 							{tab === 'resume' && (
 								<div>
+									{application.fit_score !== null && application.fit_decision && fitDetails && (
+										<FitCard
+											score={application.fit_score}
+											decision={application.fit_decision}
+											categories={fitDetails.categories}
+											reasons={fitDetails.reasons}
+											t={t}
+										/>
+									)}
 									<div className='kv'>
 										<span className='k'>{t.drawer.status}</span>
 										<span className='v'>
@@ -250,6 +350,86 @@ export default function ApplicationDrawer({
 									{application.cv_file_path && (
 										<div className='note' style={{ marginTop: 2 }}>
 											{t.drawer.localPathsHint}
+										</div>
+									)}
+								</div>
+							)}
+
+							{tab === 'followup' && (
+								<div>
+									{followupError && <div className='error-box'>{followupError}</div>}
+
+									<div className='field'>
+										<label>{t.drawer.followupDelayLabel}</label>
+										<input
+											type='number'
+											min={1}
+											value={delayDays}
+											onChange={(e) => setDelayDays(Number(e.target.value))}
+											onBlur={handleDelayBlur}
+											disabled={delaySaving}
+											style={{
+												maxWidth: 120,
+												border: '1px solid var(--rule)',
+												borderRadius: 5,
+												padding: '9px 11px',
+												background: 'var(--paper)',
+												color: 'var(--ink)',
+											}}
+										/>
+										{delaySaved && (
+											<span className='note' style={{ marginLeft: 8, color: 'var(--green)' }}>
+												{t.drawer.notesSaved}
+											</span>
+										)}
+									</div>
+
+									<div className='field'>
+										<textarea
+											rows={2}
+											className='note-box'
+											placeholder={t.drawer.followupNotePlaceholder}
+											value={followupNote}
+											onChange={(e) => setFollowupNote(e.target.value)}
+										/>
+									</div>
+									<div className='wizard-actions' style={{ justifyContent: 'flex-start' }}>
+										<button type='button' className='btn' onClick={handleMarkFollowedUp} disabled={followupPending}>
+											{followupPending ? '…' : t.drawer.followupMarkDone}
+										</button>
+									</div>
+
+									<h3 style={{ marginTop: 20 }}>{t.drawer.followupHistoryTitle}</h3>
+									{application.followups.length === 0 ? (
+										<div className='panel-empty'>{t.drawer.followupNone}</div>
+									) : (
+										<div className='timeline'>
+											{application.followups.map((f) => (
+												<div className='tl-item' key={f.id}>
+													<div className='tl-dot' />
+													<div>
+														<div className='tl-date font-mono'>{formatDateTime(f.followed_up_at, locale)}</div>
+														{f.note && <div className='tl-text'>{f.note}</div>}
+													</div>
+												</div>
+											))}
+										</div>
+									)}
+
+									<h3 style={{ marginTop: 20 }}>{t.drawer.followupDraftTitle}</h3>
+									<div className='wizard-actions' style={{ justifyContent: 'flex-start' }}>
+										<button type='button' className='btn subtle' onClick={handleGenerateDraft} disabled={draftLoading}>
+											{draftLoading ? t.drawer.followupGeneratingDraft : t.drawer.followupGenerateDraft}
+										</button>
+									</div>
+									{draftText && (
+										<div style={{ marginTop: 10 }}>
+											<textarea readOnly rows={8} className='note-box' value={draftText} />
+											<div className='wizard-actions' style={{ justifyContent: 'flex-start', marginTop: 8 }}>
+												<button type='button' className='btn subtle' onClick={handleCopyDraft}>
+													{draftCopied ? t.drawer.followupCopied : t.drawer.followupCopy}
+												</button>
+											</div>
 										</div>
 									)}
 								</div>

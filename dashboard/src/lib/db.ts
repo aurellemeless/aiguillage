@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Application } from './types';
+import { computeNextFollowupDate } from './followup';
 
 const DB_PATH = path.join(process.cwd(), '..', 'data', 'applications.db');
 const SCHEMA_PATH = path.join(process.cwd(), '..', 'tracker', 'schema.sql');
@@ -76,16 +77,21 @@ export interface NewApplication {
 	cv_file_path?: string | null;
 	cover_letter_file_path?: string | null;
 	profile_slug: string;
+	fit_score?: number | null;
+	fit_decision?: string | null;
+	fit_json?: string | null;
 }
 
 export function insertApplication(app: NewApplication): number {
 	const database = getDb();
 	const today = new Date().toISOString().slice(0, 10);
+	const delay = getProfileSettings(app.profile_slug).default_followup_delay_days;
+	const nextFollowupDate = computeNextFollowupDate(today, delay);
 	const result = database
 		.prepare(
 			`INSERT INTO applications
-				(company, role, offer_source, offer_text, application_date, status, cv_file_path, cover_letter_file_path, profile_slug)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+				(company, role, offer_source, offer_text, application_date, status, cv_file_path, cover_letter_file_path, profile_slug, followup_delay_days, next_followup_date, fit_score, fit_decision, fit_json)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			app.company,
@@ -96,11 +102,86 @@ export function insertApplication(app: NewApplication): number {
 			app.status,
 			app.cv_file_path ?? null,
 			app.cover_letter_file_path ?? null,
-			app.profile_slug
+			app.profile_slug,
+			delay,
+			nextFollowupDate,
+			app.fit_score ?? null,
+			app.fit_decision ?? null,
+			app.fit_json ?? null
 		);
 	const applicationId = Number(result.lastInsertRowid);
 	recordStatusChange(applicationId, app.status);
 	return applicationId;
+}
+
+export interface Followup {
+	id: number;
+	application_id: number;
+	followed_up_at: string;
+	note: string | null;
+}
+
+export function listFollowups(applicationId: number): Followup[] {
+	const database = getDb();
+	const rows = database
+		.prepare('SELECT * FROM followups WHERE application_id = ? ORDER BY followed_up_at DESC, id DESC')
+		.all(applicationId) as unknown as Followup[];
+	return rows.map((row) => ({ ...row }));
+}
+
+export function createFollowup(applicationId: number, profileSlug: string, note: string | null): Followup | undefined {
+	const database = getDb();
+	const app = getApplication(applicationId, profileSlug);
+	if (!app) return undefined;
+
+	const now = new Date().toISOString();
+	const result = database
+		.prepare('INSERT INTO followups (application_id, followed_up_at, note) VALUES (?, ?, ?)')
+		.run(applicationId, now, note);
+
+	const nextFollowupDate = computeNextFollowupDate(now.slice(0, 10), app.followup_delay_days);
+	database.prepare('UPDATE applications SET next_followup_date = ? WHERE id = ?').run(nextFollowupDate, applicationId);
+
+	return { id: Number(result.lastInsertRowid), application_id: applicationId, followed_up_at: now, note };
+}
+
+export function updateFollowupDelay(applicationId: number, profileSlug: string, days: number): boolean {
+	const database = getDb();
+	const app = getApplication(applicationId, profileSlug);
+	if (!app) return false;
+
+	const lastFollowup = listFollowups(applicationId)[0];
+	const referenceDate = lastFollowup ? lastFollowup.followed_up_at.slice(0, 10) : app.application_date;
+	const nextFollowupDate = referenceDate ? computeNextFollowupDate(referenceDate, days) : null;
+
+	database
+		.prepare('UPDATE applications SET followup_delay_days = ?, next_followup_date = ? WHERE id = ? AND profile_slug = ?')
+		.run(days, nextFollowupDate, applicationId, profileSlug);
+	return true;
+}
+
+export interface ProfileSettings {
+	default_followup_delay_days: number;
+}
+
+const DEFAULT_PROFILE_SETTINGS: ProfileSettings = { default_followup_delay_days: 10 };
+
+export function getProfileSettings(profileSlug: string): ProfileSettings {
+	const database = getDb();
+	const row = database
+		.prepare('SELECT default_followup_delay_days FROM profile_settings WHERE profile_slug = ?')
+		.get(profileSlug) as ProfileSettings | undefined;
+	return row ?? DEFAULT_PROFILE_SETTINGS;
+}
+
+export function setDefaultFollowupDelay(profileSlug: string, days: number): void {
+	const database = getDb();
+	database
+		.prepare(
+			`INSERT INTO profile_settings (profile_slug, default_followup_delay_days) VALUES (?, ?)
+			 ON CONFLICT(profile_slug) DO UPDATE SET default_followup_delay_days = excluded.default_followup_delay_days`
+		)
+		.run(profileSlug, days);
 }
 
 export function updateStatus(applicationId: number, status: string, profileSlug: string): void {
@@ -132,10 +213,14 @@ export function listStatusHistory(applicationId: number): StatusHistoryEntry[] {
 	return rows.map((row) => ({ ...row }));
 }
 
-export type ApplicationWithHistory = Application & { history: StatusHistoryEntry[] };
+export type ApplicationWithHistory = Application & { history: StatusHistoryEntry[]; followups: Followup[] };
 
 export function listApplicationsWithHistory(profileSlug: string): ApplicationWithHistory[] {
-	return listApplications(profileSlug).map((app) => ({ ...app, history: listStatusHistory(app.id) }));
+	return listApplications(profileSlug).map((app) => ({
+		...app,
+		history: listStatusHistory(app.id),
+		followups: listFollowups(app.id),
+	}));
 }
 
 function recordStatusChange(applicationId: number, status: string): void {

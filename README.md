@@ -1,6 +1,6 @@
 # Aiguillage
 
-[![Version](https://img.shields.io/badge/version-1.4.0-informational.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.5.0-informational.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A personal job-application tracker: paste a job posting, the app generates a
@@ -29,8 +29,12 @@ profile.
 
 ## Features
 
-- Analyzes a plain-text job posting with Claude Code (headless), based on
-  your profile, to propose a tailored CV and cover letter.
+- Analyzes a plain-text job posting — or just its link — with Claude Code
+  (headless), based on your profile, to propose a tailored CV and cover
+  letter.
+- Job-fit assessment on every analysis: a match score, an apply/maybe/skip
+  read, and a category breakdown (must-haves, nice-to-haves, domain fit,
+  constraints, seniority) shown as a radar chart and score meter.
 - Review and edit the proposed content before generating documents, with a
   live CV preview.
 - Generates `.docx` documents (dedicated Python service).
@@ -46,7 +50,8 @@ profile.
   view.
 - Detail panel per application: status, the original job posting (handy for
   interview prep), generated documents, status-change history, free-form
-  notes.
+  notes, and a follow-up tab (mark as followed up, history, a configurable
+  delay, and an AI-drafted follow-up message).
 - CLI tracking (`tracker/tracker_cli.py`) alongside the dashboard.
 - French/English interface switch, also used as the generation language for
   the CV and cover letter — with an option to generate both languages at

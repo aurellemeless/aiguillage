@@ -548,6 +548,186 @@ details.advanced .form-section-body {
 	background: var(--rust-soft);
 }
 
+/* ---------- fit card ---------- */
+/* Three-tone severity system, shared by the meter, the category bars and the
+   criterion chips so color always means the same thing across the card. Each
+   tone sets --fit-tone (the mark) and --fit-tone-soft (a lighter step of the
+   same hue — same ramp for track and fill, per the meter pattern). */
+.fit-tone-good {
+	--fit-tone: var(--green);
+	--fit-tone-soft: var(--green-soft);
+}
+.fit-tone-warning {
+	--fit-tone: var(--amber);
+	--fit-tone-soft: var(--amber-soft);
+}
+.fit-tone-danger {
+	--fit-tone: var(--rust);
+	--fit-tone-soft: var(--rust-soft);
+}
+.fit-tone-neutral {
+	--fit-tone: var(--ink-faint);
+	--fit-tone-soft: var(--surface-2);
+}
+
+.fit-card {
+	border: 1px solid var(--rule);
+	border-radius: 10px;
+	padding: 18px 20px;
+	margin-bottom: 20px;
+	background: var(--surface-2);
+}
+.fit-head {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 24px;
+	padding-bottom: 12px;
+	margin-bottom: 16px;
+	border-bottom: 1px solid var(--rule);
+}
+.fit-meter {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
+}
+.fit-radar-grid {
+	fill: none;
+	stroke: var(--rule);
+	stroke-width: 1;
+}
+.fit-radar-spoke {
+	stroke: var(--rule);
+	stroke-width: 1;
+}
+.fit-radar-shape {
+	fill: var(--fit-tone);
+	fill-opacity: 0.14;
+	stroke: var(--fit-tone);
+	stroke-width: 2;
+	stroke-linejoin: round;
+	transition: fill-opacity 0.2s ease;
+}
+.fit-radar-dot {
+	fill: var(--fit-tone);
+	stroke: var(--surface-2);
+	stroke-width: 2;
+}
+.fit-radar-label {
+	font-size: 11px;
+	font-weight: 500;
+	fill: var(--ink-soft);
+}
+.fit-ring-track {
+	stroke: var(--fit-tone-soft);
+}
+.fit-ring-fill {
+	stroke: var(--fit-tone);
+	transition: stroke-dashoffset 0.4s ease;
+}
+.fit-ring-value {
+	font-size: 20px;
+	font-weight: 700;
+	fill: var(--ink);
+}
+.fit-ring-label {
+	font-size: 9px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	fill: var(--ink-faint);
+}
+.fit-decision {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+	font-size: 13px;
+	padding: 5px 12px;
+	border-radius: 999px;
+	color: var(--fit-tone);
+	background: var(--fit-tone-soft);
+	white-space: nowrap;
+}
+.fit-categories {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+.fit-category-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+	margin-bottom: 5px;
+}
+.fit-category-label {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--ink-faint);
+}
+.fit-category-tone {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--fit-tone);
+}
+.fit-bar-track {
+	height: 7px;
+	border-radius: 999px;
+	background: var(--fit-tone-soft);
+	overflow: hidden;
+}
+.fit-bar-fill {
+	height: 100%;
+	border-radius: 999px;
+	background: var(--fit-tone);
+}
+.fit-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px;
+}
+.fit-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 12px;
+	padding: 4px 9px 4px 7px;
+	border-radius: 999px;
+	background: var(--surface);
+	border: 1px solid var(--fit-tone-soft);
+	color: var(--ink-soft);
+}
+.fit-chip-icon {
+	font-size: 11px;
+}
+.fit-chip-result {
+	color: var(--fit-tone);
+	font-weight: 600;
+}
+.fit-reasons ul {
+	margin: 8px 0 0;
+	padding-left: 18px;
+}
+.fit-reasons li {
+	margin-bottom: 4px;
+}
+.fit-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 999px;
+	color: var(--fit-tone);
+	background: var(--fit-tone-soft);
+}
+
 /* ---------- dashboard ---------- */
 .kpi-row {
 	display: grid;
@@ -773,6 +953,12 @@ details.advanced .form-section-body {
 .col.drag-over {
 	outline-color: var(--accent);
 	background: var(--accent-soft);
+}
+.card-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
 }
 .card .co {
 	font-weight: 600;

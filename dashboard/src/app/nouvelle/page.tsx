@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ReviewForm from '@/components/review-form';
 import CvPreview from '@/components/cv-preview';
 import CopyablePath from '@/components/copyable-path';
+import FitCard from '@/components/fit-card';
 import { ProposedContent } from '@/lib/types';
 import { Locale, parseLocale } from '@/lib/i18n';
 import { useLocale } from '@/lib/locale-context';
@@ -22,6 +23,19 @@ interface GenerateResult {
 }
 
 const PATCH_DEBOUNCE_MS = 800;
+
+// True only when the whole field is a single http(s) link, not text that
+// happens to contain one — a pasted job posting almost always has whitespace.
+function isBareUrl(value: string): boolean {
+	const trimmed = value.trim();
+	if (!trimmed || /\s/.test(trimmed)) return false;
+	try {
+		const parsed = new URL(trimmed);
+		return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+	} catch {
+		return false;
+	}
+}
 
 export default function NouvelleCandidaturePage() {
 	return (
@@ -45,6 +59,8 @@ function NouvelleCandidatureInner() {
 	const [generateLetter, setGenerateLetter] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [result, setResult] = useState<GenerateResult | null>(null);
+	const [fetchingOffer, setFetchingOffer] = useState(false);
+	const [submittingGeneration, setSubmittingGeneration] = useState(false);
 
 	const patchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -135,12 +151,34 @@ function NouvelleCandidatureInner() {
 
 	async function handleAnalyze() {
 		setError(null);
+		let textToAnalyze = offerText;
+
+		if (isBareUrl(offerText)) {
+			setFetchingOffer(true);
+			try {
+				const res = await fetch('/api/jobs/fetch-offer', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ url: offerText.trim() }),
+				});
+				const data = await res.json();
+				if (!res.ok) throw new Error(data.error ?? t.wizard.fetchOfferFailed);
+				textToAnalyze = data.text;
+				setOfferText(data.text);
+			} catch (err) {
+				setError(err instanceof Error ? err.message : String(err));
+				setFetchingOffer(false);
+				return;
+			}
+			setFetchingOffer(false);
+		}
+
 		setStep('analyse');
 		try {
 			const res = await fetch('/api/jobs', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ offerText, language: locale }),
+				body: JSON.stringify({ offerText: textToAnalyze, language: locale }),
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.wizard.analyzeFailed);
@@ -154,16 +192,40 @@ function NouvelleCandidatureInner() {
 	}
 
 	async function handleGenerate() {
-		if (!jobId) return;
+		// Also guards against a double-click firing two POSTs: the second would
+		// be rejected as "already launched" by the server.
+		if (!jobId || submittingGeneration) return;
 		setError(null);
-		setStep('generation');
+		setSubmittingGeneration(true);
 		try {
 			const res = await fetch(`/api/jobs/${jobId}/generate`, { method: 'POST' });
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.wizard.generateFailed);
+			// Only flip to the 'generation' step (which starts polling) once the
+			// POST has actually returned — the server sets the job's status to
+			// 'generating' before responding, so polling can never race ahead of
+			// it and read a stale 'ready' status that would bounce the step back.
+			setStep('generation');
 		} catch (err) {
-			setError(err instanceof Error ? err.message : String(err));
-			setStep('relecture');
+			// The launch call failed — but the job may still be running or have
+			// already finished (a rejected duplicate request, a flaky response
+			// for an otherwise-accepted call, another tab). Reflect the server's
+			// real state instead of blindly forcing the step back to 'relecture',
+			// which would strand a successful generation on the wrong screen.
+			try {
+				const res = await fetch(`/api/jobs/${jobId}`);
+				const data = await res.json();
+				if (res.ok && data.job) {
+					applyJob(data.job);
+				} else {
+					throw new Error('no job');
+				}
+			} catch {
+				setError(err instanceof Error ? err.message : String(err));
+				setStep('relecture');
+			}
+		} finally {
+			setSubmittingGeneration(false);
 		}
 	}
 
@@ -208,11 +270,12 @@ function NouvelleCandidatureInner() {
 								placeholder={t.wizard.offerPlaceholder}
 								value={offerText}
 								onChange={(e) => setOfferText(e.target.value)}
+								disabled={fetchingOffer}
 							/>
 						</div>
 						<div className='wizard-actions'>
-							<button className='btn' onClick={handleAnalyze} disabled={!offerText.trim()}>
-								{t.wizard.analyze}
+							<button className='btn' onClick={handleAnalyze} disabled={!offerText.trim() || fetchingOffer}>
+								{fetchingOffer ? t.wizard.fetchingOffer : t.wizard.analyze}
 							</button>
 						</div>
 					</div>
@@ -223,6 +286,16 @@ function NouvelleCandidatureInner() {
 						<div className='scanline' />
 						<div>{t.wizard.analyzing}</div>
 					</div>
+				)}
+
+				{step === 'relecture' && content && content.fit && (
+					<FitCard
+						score={content.fit.score}
+						decision={content.fit.decision}
+						categories={content.fit.categories}
+						reasons={content.fit.reasons}
+						t={t}
+					/>
 				)}
 
 				{step === 'relecture' && content && (
@@ -246,11 +319,11 @@ function NouvelleCandidatureInner() {
 				)}
 				{step === 'relecture' && content && (
 					<div className='wizard-actions'>
-						<button className='btn subtle' onClick={() => setStep('offre')}>
+						<button className='btn subtle' onClick={() => setStep('offre')} disabled={submittingGeneration}>
 							{t.wizard.back}
 						</button>
-						<button className='btn' onClick={handleGenerate}>
-							{t.wizard.approveAndGenerate}
+						<button className='btn' onClick={handleGenerate} disabled={submittingGeneration}>
+							{submittingGeneration ? '…' : t.wizard.approveAndGenerate}
 						</button>
 					</div>
 				)}

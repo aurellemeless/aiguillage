@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.5.0] — 2026-09-17
+
+### Added
+
+- The wizard's offer field now also accepts a bare job posting link — paste
+  a URL instead of the text and the app fetches and extracts it before
+  analysis.
+- Follow-up tracking: mark an application as followed up (with an optional
+  note), see the full follow-up history, set a per-application or
+  per-profile-default delay, and generate an AI-drafted follow-up message
+  from the profile and the original offer.
+- Job-fit assessment on every offer analysis: a 0-100 match score, an
+  apply/maybe/skip read, and a breakdown across five categories (must-haves,
+  nice-to-haves, domain experience, constraints, seniority) — shown as a
+  score meter, a radar chart, and per-category bars, plus a compact badge on
+  Kanban cards and in the list view.
+
+### Fixed
+
+- Approving generation in the wizard could bounce back to the review step
+  right after a successful generation, due to a race between the job's
+  status update and the wizard's first status poll — a second click then
+  correctly refused as already launched, leaving the application stuck.
+
 ## [1.4.0] — 2026-09-13
 
 ### Added
