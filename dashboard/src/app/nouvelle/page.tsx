@@ -60,6 +60,7 @@ function NouvelleCandidatureInner() {
 	const [error, setError] = useState<string | null>(null);
 	const [result, setResult] = useState<GenerateResult | null>(null);
 	const [fetchingOffer, setFetchingOffer] = useState(false);
+	const [submittingGeneration, setSubmittingGeneration] = useState(false);
 
 	const patchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -191,16 +192,40 @@ function NouvelleCandidatureInner() {
 	}
 
 	async function handleGenerate() {
-		if (!jobId) return;
+		// Also guards against a double-click firing two POSTs: the second would
+		// be rejected as "already launched" by the server.
+		if (!jobId || submittingGeneration) return;
 		setError(null);
-		setStep('generation');
+		setSubmittingGeneration(true);
 		try {
 			const res = await fetch(`/api/jobs/${jobId}/generate`, { method: 'POST' });
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? t.wizard.generateFailed);
+			// Only flip to the 'generation' step (which starts polling) once the
+			// POST has actually returned — the server sets the job's status to
+			// 'generating' before responding, so polling can never race ahead of
+			// it and read a stale 'ready' status that would bounce the step back.
+			setStep('generation');
 		} catch (err) {
-			setError(err instanceof Error ? err.message : String(err));
-			setStep('relecture');
+			// The launch call failed — but the job may still be running or have
+			// already finished (a rejected duplicate request, a flaky response
+			// for an otherwise-accepted call, another tab). Reflect the server's
+			// real state instead of blindly forcing the step back to 'relecture',
+			// which would strand a successful generation on the wrong screen.
+			try {
+				const res = await fetch(`/api/jobs/${jobId}`);
+				const data = await res.json();
+				if (res.ok && data.job) {
+					applyJob(data.job);
+				} else {
+					throw new Error('no job');
+				}
+			} catch {
+				setError(err instanceof Error ? err.message : String(err));
+				setStep('relecture');
+			}
+		} finally {
+			setSubmittingGeneration(false);
 		}
 	}
 
@@ -294,11 +319,11 @@ function NouvelleCandidatureInner() {
 				)}
 				{step === 'relecture' && content && (
 					<div className='wizard-actions'>
-						<button className='btn subtle' onClick={() => setStep('offre')}>
+						<button className='btn subtle' onClick={() => setStep('offre')} disabled={submittingGeneration}>
 							{t.wizard.back}
 						</button>
-						<button className='btn' onClick={handleGenerate}>
-							{t.wizard.approveAndGenerate}
+						<button className='btn' onClick={handleGenerate} disabled={submittingGeneration}>
+							{submittingGeneration ? '…' : t.wizard.approveAndGenerate}
 						</button>
 					</div>
 				)}
