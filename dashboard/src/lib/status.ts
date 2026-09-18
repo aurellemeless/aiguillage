@@ -16,6 +16,24 @@ export function stampClassForStatus(status: string): string {
 	return STAMP_CLASS[status as Status] ?? 'draft';
 }
 
+// One chart slot per status, in the same pipeline order STATUSES is defined
+// in — pie wedges are drawn in this order too, so any two wedges that end up
+// touching are an adjacent (CVD-validated) pair in the underlying palette.
+const CHART_COLOR: Record<Status, string> = {
+	draft: 'var(--chart-1)',
+	sent: 'var(--chart-2)',
+	response_received: 'var(--chart-3)',
+	hr_interview: 'var(--chart-4)',
+	technical_interview: 'var(--chart-5)',
+	offer_received: 'var(--chart-6)',
+	rejected: 'var(--chart-7)',
+	no_response_abandoned: 'var(--chart-8)',
+};
+
+export function chartColorForStatus(status: string): string {
+	return CHART_COLOR[status as Status] ?? 'var(--chart-1)';
+}
+
 export function daysSince(dateStr: string | null): number | null {
 	if (!dateStr) return null;
 	const start = new Date(dateStr);

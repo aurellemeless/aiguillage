@@ -6,8 +6,10 @@ import { daysSince, formatDate, formatDateTime } from '@/lib/status';
 import { dayPrefix, getDict, statusLabel } from '@/lib/i18n';
 import { getServerLocale } from '@/lib/server-locale';
 import { getServerProfileSlug } from '@/lib/server-profile';
+import { STATUSES } from '@/lib/types';
 import SearchBox from '@/components/search-box';
 import MenuButton from '@/components/menu-button';
+import StatusPieChart from '@/components/status-pie-chart';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +40,11 @@ export default async function DashboardPage() {
 		.flatMap((a) => a.history.map((h) => ({ ...h, company: a.company, role: a.role })))
 		.sort((a, b) => b.changed_at.localeCompare(a.changed_at))
 		.slice(0, 6);
+
+	const statusCounts = STATUSES.map((status) => ({
+		status,
+		count: applications.filter((a) => a.status === status).length,
+	}));
 
 	return (
 		<div>
@@ -118,6 +125,18 @@ export default async function DashboardPage() {
 							))}
 						</div>
 					</div>
+				</div>
+
+				<div className='panel' style={{ marginTop: 20 }}>
+					<div className='panel-head'>
+						<h2>{t.dashboard.statusBreakdown}</h2>
+						{total > 0 && <span className='note font-mono'>{t.dashboard.statusBreakdownCount(total)}</span>}
+					</div>
+					{total === 0 ? (
+						<div className='panel-empty'>{t.dashboard.statusBreakdownEmpty}</div>
+					) : (
+						<StatusPieChart counts={statusCounts} locale={locale} />
+					)}
 				</div>
 			</div>
 		</div>

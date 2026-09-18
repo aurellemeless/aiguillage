@@ -75,6 +75,9 @@ const dict = {
 			recentActivity: 'Activité récente',
 			recentActivityEmpty: 'Aucune activité pour le moment.',
 			statusArrow: 'statut →',
+			statusBreakdown: 'Répartition par statut',
+			statusBreakdownCount: (n: number) => `${n} candidature${n > 1 ? 's' : ''}`,
+			statusBreakdownEmpty: 'Aucune candidature pour le moment.',
 		},
 		candidatures: {
 			title: 'Candidatures',
@@ -444,6 +447,9 @@ const dict = {
 			recentActivity: 'Recent activity',
 			recentActivityEmpty: 'No activity yet.',
 			statusArrow: 'status →',
+			statusBreakdown: 'Status breakdown',
+			statusBreakdownCount: (n: number) => `${n} application${n > 1 ? 's' : ''}`,
+			statusBreakdownEmpty: 'No applications yet.',
 		},
 		candidatures: {
 			title: 'Applications',
