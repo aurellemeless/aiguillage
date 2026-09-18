@@ -390,3 +390,90 @@ export async function extractProfileFromText(cvText: string, language: Locale = 
 	const prompt = buildProfileExtractionPromptFromText(cvText, language);
 	return runClaudeForJson(prompt, ['--disallowedTools', DISALLOWED_TOOLS]) as Promise<object>;
 }
+
+// For recording an application made outside the app: the candidate already
+// applied elsewhere and just wants it tracked, with whatever documents they
+// actually sent kept as a backup — never a blank form to fill in by hand.
+export interface ApplicationSource {
+	contextText: string;
+	cvText?: string;
+	cvFilePath?: string;
+	coverLetterText?: string;
+	coverLetterFilePath?: string;
+}
+
+export interface ExtractedApplicationInfo {
+	company: string;
+	role: string;
+	offer_text: string | null;
+	offer_source: string | null;
+	application_date: string | null;
+}
+
+function documentBlock(label: string, text: string | undefined, filePath: string | undefined): string {
+	if (filePath) return `${label} (read it with the Read tool at this path): ${filePath}`;
+	if (text) return `${label}:\n"""\n${text}\n"""`;
+	return '';
+}
+
+function buildApplicationExtractionPrompt(source: ApplicationSource, language: Locale): string {
+	const today = new Date().toISOString().slice(0, 10);
+	const blocks = [
+		source.contextText.trim() ? `Context pasted by the candidate (a job posting, a confirmation email, a note — anything they had on hand):\n"""\n${source.contextText.trim()}\n"""` : '',
+		documentBlock('CV actually sent for this application', source.cvText, source.cvFilePath),
+		documentBlock('Cover letter actually sent for this application', source.coverLetterText, source.coverLetterFilePath),
+	]
+		.filter(Boolean)
+		.join('\n\n');
+
+	if (language === 'en') {
+		return `You are an assistant who reconstructs the record of a job application the candidate already submitted outside this app, from whatever material they have on hand.
+
+${blocks}
+
+Today's date is ${today}.
+
+Strict instructions:
+- Extract "company" and "role" from the material above. If a cover letter is present, it's usually the most reliable source (it typically opens by naming both). If you genuinely cannot determine one of them from anything given, return an empty string "" for it — never invent a company or role.
+- "offer_text": if the context includes the actual job posting text, return it verbatim (trimmed of surrounding boilerplate like email headers/footers if it was pasted from an email). If there's no posting text — only a confirmation email, or nothing usable — return null. Never fabricate a posting.
+- "offer_source": if the material mentions where the posting was found (a job board, a recruiter, a referral), a short label (e.g. "LinkedIn", "Indeed", "Cooptation"). Otherwise null.
+- "application_date": if the material states or clearly implies when the application was actually sent (an email date, a line saying "sent on..."), that date as YYYY-MM-DD. Otherwise null — do not guess a date, the app will default to today.
+- Reply ONLY with a valid JSON object, no text before or after, no markdown fences, matching exactly this schema:
+{
+  "company": "...",
+  "role": "...",
+  "offer_text": null,
+  "offer_source": null,
+  "application_date": null
+}`;
+	}
+
+	return `Tu es un assistant qui reconstitue la fiche d'une candidature déjà envoyée par le candidat en dehors de cette application, à partir de ce qu'il a sous la main.
+
+${blocks}
+
+La date d'aujourd'hui est le ${today}.
+
+Instructions strictes :
+- Extrais "company" et "role" à partir des éléments ci-dessus. Si une lettre de motivation est fournie, c'est généralement la source la plus fiable (elle nomme presque toujours l'entreprise et le poste dès le début). Si tu ne peux vraiment pas déterminer l'un des deux à partir de ce qui est fourni, renvoie une chaîne vide "" pour ce champ — n'invente jamais une entreprise ou un poste.
+- "offer_text" : si le contexte contient le texte réel de l'offre, renvoie-le tel quel (débarrassé des en-têtes/pieds de page si c'était collé depuis un email). S'il n'y a pas de texte d'offre — seulement un email de confirmation, ou rien d'exploitable — renvoie null. N'invente jamais une offre.
+- "offer_source" : si le matériel mentionne où l'offre a été trouvée (un jobboard, un recruteur, une cooptation), un court libellé (ex. "LinkedIn", "Indeed", "Cooptation"). Sinon null.
+- "application_date" : si le matériel indique ou laisse clairement entendre la date d'envoi réelle de la candidature (une date d'email, une phrase du type "envoyée le..."), cette date au format YYYY-MM-DD. Sinon null — n'invente jamais de date, l'app utilisera la date du jour par défaut.
+- Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, respectant exactement ce schéma :
+{
+  "company": "...",
+  "role": "...",
+  "offer_text": null,
+  "offer_source": null,
+  "application_date": null
+}`;
+}
+
+export async function extractApplicationInfo(source: ApplicationSource, language: Locale = 'fr'): Promise<ExtractedApplicationInfo> {
+	const prompt = buildApplicationExtractionPrompt(source, language);
+	const needsFileAccess = !!source.cvFilePath || !!source.coverLetterFilePath;
+	return runClaudeForJson(
+		prompt,
+		needsFileAccess ? ['--allowedTools', 'Read'] : ['--disallowedTools', DISALLOWED_TOOLS]
+	) as Promise<ExtractedApplicationInfo>;
+}

@@ -80,13 +80,14 @@ export interface NewApplication {
 	fit_score?: number | null;
 	fit_decision?: string | null;
 	fit_json?: string | null;
+	application_date?: string;
 }
 
 export function insertApplication(app: NewApplication): number {
 	const database = getDb();
-	const today = new Date().toISOString().slice(0, 10);
+	const applicationDate = app.application_date ?? new Date().toISOString().slice(0, 10);
 	const delay = getProfileSettings(app.profile_slug).default_followup_delay_days;
-	const nextFollowupDate = computeNextFollowupDate(today, delay);
+	const nextFollowupDate = computeNextFollowupDate(applicationDate, delay);
 	const result = database
 		.prepare(
 			`INSERT INTO applications
@@ -98,7 +99,7 @@ export function insertApplication(app: NewApplication): number {
 			app.role,
 			app.offer_source ?? null,
 			app.offer_text ?? null,
-			today,
+			applicationDate,
 			app.status,
 			app.cv_file_path ?? null,
 			app.cover_letter_file_path ?? null,

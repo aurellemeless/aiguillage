@@ -64,7 +64,6 @@ export function slugify(text: string): string {
 		.replace(/(^-|-$)/g, '');
 }
 
-export function applicationSlug(company: string, role: string): string {
-	const date = new Date().toISOString().slice(0, 10);
-	return `${date}_${slugify(company)}_${slugify(role)}`;
+export function applicationSlug(company: string, role: string, date?: string): string {
+	return `${date ?? new Date().toISOString().slice(0, 10)}_${slugify(company)}_${slugify(role)}`;
 }
