@@ -1,6 +1,6 @@
 # Aiguillage
 
-[![Version](https://img.shields.io/badge/version-1.5.0-informational.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.6.0-informational.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A personal job-application tracker: paste a job posting, the app generates a
@@ -32,6 +32,17 @@ profile.
 - Analyzes a plain-text job posting — or just its link — with Claude Code
   (headless), based on your profile, to propose a tailored CV and cover
   letter.
+- Offer discovery ("Découverte" page): scans the France Travail job-search
+  API for postings matching your keywords/location, scores each new one
+  against your profile, and surfaces the ones above a threshold you set —
+  with the same fit card, and a one-click "Generate CV & apply" straight
+  into the wizard. Requires France Travail API credentials — see
+  [Offer discovery setup](#offer-discovery-setup) below.
+- Import an application made outside the app: drop the CV you actually sent
+  (for backup) and optionally the cover letter, paste whatever context is
+  on hand — the posting, a confirmation email, a few words — and the
+  company, role, source, and application date are identified automatically
+  instead of filling in a blank form.
 - Job-fit assessment on every analysis: a match score, an apply/maybe/skip
   read, and a category breakdown (must-haves, nice-to-haves, domain fit,
   constraints, seniority) shown as a radar chart and score meter.
@@ -45,7 +56,8 @@ profile.
   fully separate Kanban board, dashboard, tasks, and generated documents —
   useful if more than one person uses the app.
 - Dashboard: active applications, awaiting response, ongoing interviews,
-  response rate, follow-ups due, recent activity.
+  response rate, follow-ups due, recent activity, and a status breakdown
+  pie chart.
 - Kanban view (drag a card to another column to change its status) and list
   view.
 - Detail panel per application: status, the original job posting (handy for
@@ -117,6 +129,39 @@ Starts the CV generation service (port 8000) then the dashboard
 The dashboard's dev server also prints a QR code in the terminal once it's
 ready, linking straight to the Candidatures board on your phone (same
 Wi-Fi).
+
+## Offer discovery setup
+
+The "Découverte" page scans [France Travail](https://francetravail.io)'s
+official, free job-search API — the only source wired up for now. **There is
+no comparable public API for APEC**: when APEC shares a posting with France
+Travail, it already surfaces through this same API, so a separate APEC
+integration would just be a fake dev-facing endpoint you can't actually call.
+
+To enable it:
+
+1. Create an account and a "France Travail Connect" app on
+   [francetravail.io](https://francetravail.io) (free), and subscribe the app
+   to the "Offres d'emploi" API. When the registration form asks for an
+   "URL d'accès" (the site where the API is used), use this repo's URL — the
+   app has no public deployment, and this flow doesn't use OAuth redirects
+   anyway.
+2. Copy the app's client ID and secret into `dashboard/.env.local` (create the
+   file if it doesn't exist — it's git-ignored, never commit real
+   credentials):
+
+   ```
+   FRANCE_TRAVAIL_CLIENT_ID=your-client-id
+   FRANCE_TRAVAIL_CLIENT_SECRET=your-client-secret
+   ```
+
+3. Restart the dashboard. Without these two variables set, "Découverte" stays
+   visible but every scan fails with a clear "not configured" error instead
+   of silently doing nothing.
+
+Search keywords, location, and the minimum fit score are configured per
+profile, in a "Recherche d'offres" section on the **Profile** page. Scanning
+is manual for now ("Scan now" button) — no scheduled/background scanning yet.
 
 ## Tracking applications from the CLI
 

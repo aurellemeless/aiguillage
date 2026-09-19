@@ -19,6 +19,7 @@ export default function Sidebar() {
 	const { open, setOpen } = useSidebar();
 	const { profileSlug, profiles, setProfileSlug } = useProfile();
 	const [activeTaskCount, setActiveTaskCount] = useState(0);
+	const [newOfferCount, setNewOfferCount] = useState(0);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -42,10 +43,34 @@ export default function Sidebar() {
 		};
 	}, []);
 
+	useEffect(() => {
+		if (!profileSlug) {
+			setNewOfferCount(0);
+			return;
+		}
+		let cancelled = false;
+		async function poll() {
+			try {
+				const res = await fetch(`/api/profiles/${profileSlug}/offers?status=new`);
+				const data = await res.json();
+				if (!cancelled) setNewOfferCount((data.offers ?? []).length);
+			} catch {
+				// ignore transient polling errors
+			}
+		}
+		poll();
+		const interval = setInterval(poll, TASKS_POLL_INTERVAL_MS);
+		return () => {
+			cancelled = true;
+			clearInterval(interval);
+		};
+	}, [profileSlug]);
+
 	const navItems = [
 		{ href: '/', label: t.nav.dashboard, icon: '▣', badge: 0 },
 		{ href: '/applications', label: t.nav.applications, icon: '▤', badge: 0 },
 		{ href: '/nouvelle', label: t.nav.newApplication, icon: '✎', badge: 0 },
+		{ href: '/decouverte', label: t.nav.discovery, icon: '◎', badge: newOfferCount },
 		{ href: '/taches', label: t.nav.tasks, icon: '⧗', badge: activeTaskCount },
 		{ href: '/profil', label: t.nav.profile, icon: '⚙', badge: 0 },
 	];

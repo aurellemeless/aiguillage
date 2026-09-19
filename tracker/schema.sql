@@ -53,5 +53,35 @@ CREATE TABLE IF NOT EXISTS followups (
 
 CREATE TABLE IF NOT EXISTS profile_settings (
     profile_slug TEXT PRIMARY KEY,
-    default_followup_delay_days INTEGER NOT NULL DEFAULT 10
+    default_followup_delay_days INTEGER NOT NULL DEFAULT 10,
+    search_keywords TEXT NOT NULL DEFAULT '[]',
+    search_location TEXT,
+    search_min_fit_score INTEGER NOT NULL DEFAULT 70,
+    search_sources TEXT NOT NULL DEFAULT '["france_travail"]',
+    last_scan_at TEXT,
+    last_scan_status TEXT,
+    last_scan_error TEXT,
+    last_scan_found INTEGER,
+    last_scan_new INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS discovered_offers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_slug TEXT NOT NULL,
+    source TEXT NOT NULL,
+    external_id TEXT NOT NULL,
+    url TEXT,
+    title TEXT NOT NULL,
+    company TEXT,
+    location TEXT,
+    contract_type TEXT,
+    posted_date TEXT,
+    raw_text TEXT NOT NULL,
+    fit_score INTEGER NOT NULL,
+    fit_decision TEXT NOT NULL,
+    fit_json TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'new',
+    application_id INTEGER REFERENCES applications(id),
+    discovered_at TEXT NOT NULL,
+    UNIQUE (profile_slug, source, external_id)
 );

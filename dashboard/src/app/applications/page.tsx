@@ -23,7 +23,10 @@ export default async function ApplicationsPage() {
 			<div className='topbar'>
 				<MenuButton />
 				<h1>{t.candidatures.title}</h1>
-				<NextLink href='/nouvelle' className='btn' style={{ marginLeft: 'auto' }}>
+				<NextLink href='/importer' className='btn subtle' style={{ marginLeft: 'auto' }}>
+					{t.importApp.navLabel}
+				</NextLink>
+				<NextLink href='/nouvelle' className='btn'>
 					{t.common.newApplicationBtn}
 				</NextLink>
 			</div>

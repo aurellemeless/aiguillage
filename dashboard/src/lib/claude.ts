@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { ProposedContent } from './types';
+import { JobFit, ProposedContent } from './types';
 import { Locale } from './i18n';
 
 const execFileAsync = promisify(execFile);
@@ -15,6 +15,46 @@ const DISALLOWED_TOOLS = 'Bash Read Write Edit WebSearch WebFetch Agent';
 // The fuller prompts (offer analysis + job-fit assessment together) can run
 // close to two minutes; give real headroom rather than cutting it close.
 const CLAUDE_TIMEOUT_MS = 240_000;
+
+// Shared by the full analysis prompt and the fit-only prompt (offer
+// discovery) so the categorization/scoring rules never drift between them.
+function fitInstructions(language: Locale): string {
+	if (language === 'en') {
+		return `Organize it into exactly these 5 categories (omit a category only if the posting truly gives nothing to assess for it):
+  - "must_have": the requirements without which the candidate would be rejected outright (core technologies explicitly required, minimum years of experience, a required language or certification, a hard eligibility requirement).
+  - "nice_to_have": explicitly optional or bonus requirements ("a plus", "appreciated", secondary technologies).
+  - "domain_experience": fit with the business/industry domain of the posting (e.g. fintech, media/streaming, SaaS, healthcare) and the kind of product/architecture involved (e.g. public APIs, high-traffic systems) — not raw tech skills, but relevant sector/domain exposure.
+  - "constraints": practical/logistic constraints — location or remote policy, contract type (permanent/freelance/contract), language of work, availability, stated salary range if any — compare against the profile's own location/identity/languages where relevant.
+  - "seniority": the seniority level asked for (junior/mid/senior/lead/staff, years of experience, management scope) versus the candidate's actual level.
+  For each category, list its "criteria": a "label" (short, as it would appear in a table column) and a "result": "excellent" (strong, direct, recent match), "good" (real match but less central or less recent), "weak" (limited exposure only — theoretical, basic notions, certified-only, or a gap per "skills_depth_notes"), "missing" (required, absent from the profile), or "not_required" (this posting marks it optional, or it is genuinely irrelevant here — e.g. blockchain/Web3 for a posting that never mentions it).
+  - "score": your overall match percentage (0-100). This must NOT be a naive keyword count or an additive point score (do not do "React=+10, Node=+10, AWS=+5..."). Weigh categories very unevenly: "must_have" and "constraints" dominate the judgment — any "missing" must-have, or a hard constraint mismatch (e.g. on-site only in a city incompatible with the profile, or an incompatible contract type), should cap the score low regardless of how many nice-to-haves match. "nice_to_have" only nudges the score, never drives it. "domain_experience" and "seniority" sit in between: meaningful but not usually disqualifying on their own.
+  - "decision": "apply" for a strong match worth applying to, "maybe" for a partial match worth a careful read before deciding, "skip" for a poor match — driven primarily by "must_have" and "constraints", not by the score in isolation.
+  - "reasons": 3 to 6 short bullet points justifying the decision, referencing concrete elements of the profile (company names, technologies, years) — never invent an achievement not in the profile.`;
+	}
+	return `Organise-la en exactement ces 5 catégories (n'omets une catégorie que si l'offre ne donne vraiment rien à évaluer pour elle) :
+  - "must_have" : les exigences sans lesquelles le candidat serait écarté d'office (technologies cœur explicitement exigées, nombre d'années minimum, langue ou certification exigée, condition d'éligibilité rédhibitoire).
+  - "nice_to_have" : les exigences explicitement optionnelles ou en bonus ("un plus", "apprécié", technologies secondaires).
+  - "domain_experience" : l'adéquation avec le secteur/domaine métier de l'offre (ex : fintech, média/streaming, SaaS, santé) et le type de produit/architecture concerné (ex : API publiques, systèmes à fort trafic) — pas des compétences techniques brutes, mais une expérience sectorielle/métier pertinente.
+  - "constraints" : les contraintes pratiques/logistiques — localisation ou politique de télétravail, type de contrat (CDI/freelance/mission), langue de travail, disponibilité, fourchette de salaire annoncée le cas échéant — à comparer avec la localisation/l'identité/les langues du profil quand c'est pertinent.
+  - "seniority" : le niveau de séniorité demandé (junior/confirmé/senior/lead/staff, années d'expérience, périmètre de management) comparé au niveau réel du candidat.
+  Pour chaque catégorie, liste ses "criteria" : un "label" (court, comme un intitulé de colonne de tableau) et un "result" : "excellent" (correspondance solide, directe, récente), "good" (correspondance réelle mais moins centrale ou moins récente), "weak" (exposition limitée seulement — théorique, notions de base, certifié uniquement, ou un "gap" selon "skills_depth_notes"), "missing" (exigé, absent du profil), ou "not_required" (cette offre le présente comme optionnel, ou c'est réellement hors sujet ici — ex : blockchain/Web3 pour une offre qui n'en parle jamais).
+  - "score" : ton pourcentage de correspondance global (0-100). Ce ne doit SURTOUT PAS être un comptage naïf de mots-clés ni un score additif par points (pas de "React=+10, Node=+10, AWS=+5..."). Pondère les catégories de façon très inégale : "must_have" et "constraints" dominent le jugement — tout "missing" en must-have, ou une contrainte incompatible (ex : présentiel obligatoire dans une ville incompatible avec le profil, ou un type de contrat incompatible), doit plafonner le score à un niveau bas, quel que soit le nombre de nice-to-have satisfaits. "nice_to_have" ne fait qu'ajuster légèrement le score, jamais le déterminer. "domain_experience" et "seniority" se situent entre les deux : significatifs mais rarement rédhibitoires seuls.
+  - "decision" : "apply" pour une bonne correspondance qui mérite de candidater, "maybe" pour une correspondance partielle qui mérite une lecture attentive avant de décider, "skip" pour une mauvaise correspondance — déterminée avant tout par "must_have" et "constraints", pas par le score isolément.
+  - "reasons" : 3 à 6 puces courtes justifiant la décision, en citant des éléments concrets du profil (noms d'entreprises, technologies, années) — n'invente jamais une réalisation absente du profil.`;
+}
+
+const FIT_SCHEMA = `{
+  "score": 0,
+  "decision": "apply",
+  "categories": [
+    { "category": "must_have", "criteria": [{"label": "...", "result": "excellent"}] },
+    { "category": "nice_to_have", "criteria": [{"label": "...", "result": "not_required"}] },
+    { "category": "domain_experience", "criteria": [{"label": "...", "result": "good"}] },
+    { "category": "constraints", "criteria": [{"label": "...", "result": "excellent"}] },
+    { "category": "seniority", "criteria": [{"label": "...", "result": "excellent"}] }
+  ],
+  "reasons": ["..."]
+}`;
 
 function buildPrompt(offerText: string, profile: object, language: Locale): string {
 	if (language === 'en') {
@@ -34,16 +74,7 @@ Strict instructions:
 - NEVER invent a skill or experience absent from the profile. If "skills_depth_notes" marks a skill as "theoretical", "basic_notions", "certified_only" or "gap", never present it as real project experience in an experience bullet.
 - All textual content (headline, tagline, summary, bullets, letter) must be written in English, even if the profile is written in another language — translate and adapt it.
 - "personal_projects" is the only optional section: only include a personal project from the profile if it's genuinely relevant to this posting.
-- Also assess how well the candidate fits this specific posting ("fit"). Organize it into exactly these 5 categories (omit a category only if the posting truly gives nothing to assess for it):
-  - "must_have": the requirements without which the candidate would be rejected outright (core technologies explicitly required, minimum years of experience, a required language or certification, a hard eligibility requirement).
-  - "nice_to_have": explicitly optional or bonus requirements ("a plus", "appreciated", secondary technologies).
-  - "domain_experience": fit with the business/industry domain of the posting (e.g. fintech, media/streaming, SaaS, healthcare) and the kind of product/architecture involved (e.g. public APIs, high-traffic systems) — not raw tech skills, but relevant sector/domain exposure.
-  - "constraints": practical/logistic constraints — location or remote policy, contract type (permanent/freelance/contract), language of work, availability, stated salary range if any — compare against the profile's own location/identity/languages where relevant.
-  - "seniority": the seniority level asked for (junior/mid/senior/lead/staff, years of experience, management scope) versus the candidate's actual level.
-  For each category, list its "criteria": a "label" (short, as it would appear in a table column) and a "result": "excellent" (strong, direct, recent match), "good" (real match but less central or less recent), "weak" (limited exposure only — theoretical, basic notions, certified-only, or a gap per "skills_depth_notes"), "missing" (required, absent from the profile), or "not_required" (this posting marks it optional, or it is genuinely irrelevant here — e.g. blockchain/Web3 for a posting that never mentions it).
-  - "score": your overall match percentage (0-100). This must NOT be a naive keyword count or an additive point score (do not do "React=+10, Node=+10, AWS=+5..."). Weigh categories very unevenly: "must_have" and "constraints" dominate the judgment — any "missing" must-have, or a hard constraint mismatch (e.g. on-site only in a city incompatible with the profile, or an incompatible contract type), should cap the score low regardless of how many nice-to-haves match. "nice_to_have" only nudges the score, never drives it. "domain_experience" and "seniority" sit in between: meaningful but not usually disqualifying on their own.
-  - "decision": "apply" for a strong match worth applying to, "maybe" for a partial match worth a careful read before deciding, "skip" for a poor match — driven primarily by "must_have" and "constraints", not by the score in isolation.
-  - "reasons": 3 to 6 short bullet points justifying the decision, referencing concrete elements of the profile (company names, technologies, years) — never invent an achievement not in the profile.
+- Also assess how well the candidate fits this specific posting ("fit"). ${fitInstructions(language)}
 - Reply ONLY with a valid JSON object, no text before or after, no markdown fences, matching exactly this schema:
 {
   "company": "...",
@@ -57,18 +88,7 @@ Strict instructions:
     "personal_projects": [{"company": "...", "dates": "...", "role": "...", "bullets": ["..."], "tech": ["..."]}]
   },
   "cover_letter": { "recipient": "...", "subject": "...", "body": ["paragraph 1", "paragraph 2"] },
-  "fit": {
-    "score": 0,
-    "decision": "apply",
-    "categories": [
-      { "category": "must_have", "criteria": [{"label": "...", "result": "excellent"}] },
-      { "category": "nice_to_have", "criteria": [{"label": "...", "result": "not_required"}] },
-      { "category": "domain_experience", "criteria": [{"label": "...", "result": "good"}] },
-      { "category": "constraints", "criteria": [{"label": "...", "result": "excellent"}] },
-      { "category": "seniority", "criteria": [{"label": "...", "result": "excellent"}] }
-    ],
-    "reasons": ["..."]
-  }
+  "fit": ${FIT_SCHEMA}
 }`;
 	}
 
@@ -88,16 +108,7 @@ Instructions strictes :
 - N'invente JAMAIS une compétence ou une expérience absente du profil. Si "skills_depth_notes" indique un niveau "theoretical", "basic_notions", "certified_only" ou "gap" pour une compétence, ne la présente jamais comme une expérience projet réelle dans une puce d'expérience.
 - Tout le contenu textuel (headline, tagline, summary, bullets, lettre) doit être rédigé en français, même si le profil fourni contient du texte dans une autre langue : traduis-le et adapte-le.
 - "personal_projects" est la seule section optionnelle : n'inclus un projet personnel du profil que s'il est réellement pertinent pour cette offre.
-- Évalue aussi l'adéquation du candidat à cette offre précise ("fit"). Organise-la en exactement ces 5 catégories (n'omets une catégorie que si l'offre ne donne vraiment rien à évaluer pour elle) :
-  - "must_have" : les exigences sans lesquelles le candidat serait écarté d'office (technologies cœur explicitement exigées, nombre d'années minimum, langue ou certification exigée, condition d'éligibilité rédhibitoire).
-  - "nice_to_have" : les exigences explicitement optionnelles ou en bonus ("un plus", "apprécié", technologies secondaires).
-  - "domain_experience" : l'adéquation avec le secteur/domaine métier de l'offre (ex : fintech, média/streaming, SaaS, santé) et le type de produit/architecture concerné (ex : API publiques, systèmes à fort trafic) — pas des compétences techniques brutes, mais une expérience sectorielle/métier pertinente.
-  - "constraints" : les contraintes pratiques/logistiques — localisation ou politique de télétravail, type de contrat (CDI/freelance/mission), langue de travail, disponibilité, fourchette de salaire annoncée le cas échéant — à comparer avec la localisation/l'identité/les langues du profil quand c'est pertinent.
-  - "seniority" : le niveau de séniorité demandé (junior/confirmé/senior/lead/staff, années d'expérience, périmètre de management) comparé au niveau réel du candidat.
-  Pour chaque catégorie, liste ses "criteria" : un "label" (court, comme un intitulé de colonne de tableau) et un "result" : "excellent" (correspondance solide, directe, récente), "good" (correspondance réelle mais moins centrale ou moins récente), "weak" (exposition limitée seulement — théorique, notions de base, certifié uniquement, ou un "gap" selon "skills_depth_notes"), "missing" (exigé, absent du profil), ou "not_required" (cette offre le présente comme optionnel, ou c'est réellement hors sujet ici — ex : blockchain/Web3 pour une offre qui n'en parle jamais).
-  - "score" : ton pourcentage de correspondance global (0-100). Ce ne doit SURTOUT PAS être un comptage naïf de mots-clés ni un score additif par points (pas de "React=+10, Node=+10, AWS=+5..."). Pondère les catégories de façon très inégale : "must_have" et "constraints" dominent le jugement — tout "missing" en must-have, ou une contrainte incompatible (ex : présentiel obligatoire dans une ville incompatible avec le profil, ou un type de contrat incompatible), doit plafonner le score à un niveau bas, quel que soit le nombre de nice-to-have satisfaits. "nice_to_have" ne fait qu'ajuster légèrement le score, jamais le déterminer. "domain_experience" et "seniority" se situent entre les deux : significatifs mais rarement rédhibitoires seuls.
-  - "decision" : "apply" pour une bonne correspondance qui mérite de candidater, "maybe" pour une correspondance partielle qui mérite une lecture attentive avant de décider, "skip" pour une mauvaise correspondance — déterminée avant tout par "must_have" et "constraints", pas par le score isolément.
-  - "reasons" : 3 à 6 puces courtes justifiant la décision, en citant des éléments concrets du profil (noms d'entreprises, technologies, années) — n'invente jamais une réalisation absente du profil.
+- Évalue aussi l'adéquation du candidat à cette offre précise ("fit"). ${fitInstructions(language)}
 - Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, respectant exactement ce schéma :
 {
   "company": "...",
@@ -111,18 +122,7 @@ Instructions strictes :
     "personal_projects": [{"company": "...", "dates": "...", "role": "...", "bullets": ["..."], "tech": ["..."]}]
   },
   "cover_letter": { "recipient": "...", "subject": "...", "body": ["paragraphe 1", "paragraphe 2"] },
-  "fit": {
-    "score": 0,
-    "decision": "apply",
-    "categories": [
-      { "category": "must_have", "criteria": [{"label": "...", "result": "excellent"}] },
-      { "category": "nice_to_have", "criteria": [{"label": "...", "result": "not_required"}] },
-      { "category": "domain_experience", "criteria": [{"label": "...", "result": "good"}] },
-      { "category": "constraints", "criteria": [{"label": "...", "result": "excellent"}] },
-      { "category": "seniority", "criteria": [{"label": "...", "result": "excellent"}] }
-    ],
-    "reasons": ["..."]
-  }
+  "fit": ${FIT_SCHEMA}
 }`;
 }
 
@@ -273,6 +273,47 @@ export async function analyzeOffer(offerText: string, profile: object, language:
 	return runClaudeForJson(prompt, ['--disallowedTools', DISALLOWED_TOOLS]) as Promise<ProposedContent>;
 }
 
+// Fit-only assessment for offer discovery: no CV/cover letter, so it's much
+// cheaper than analyzeOffer — meant to run once per newly-found offer during
+// a scan, before the candidate ever decides to actually apply.
+function buildFitOnlyPrompt(offerText: string, profile: object, language: Locale): string {
+	if (language === 'en') {
+		return `You are an assistant who assesses how well a candidate fits a job posting, based on the candidate's full profile. You are NOT writing a CV or cover letter here — only the fit assessment.
+
+Here is the candidate's full profile (JSON):
+${JSON.stringify(profile)}
+
+Here is the job posting:
+"""
+${offerText}
+"""
+
+Assess the fit ("fit"). ${fitInstructions(language)}
+
+Reply ONLY with a valid JSON object, no text before or after, no markdown fences, matching exactly this schema:
+${FIT_SCHEMA}`;
+	}
+	return `Tu es un assistant qui évalue l'adéquation d'un candidat à une offre d'emploi, à partir du profil complet du candidat. Tu ne rédiges PAS de CV ni de lettre de motivation ici — seulement l'évaluation de fit.
+
+Voici le profil complet du candidat (JSON) :
+${JSON.stringify(profile)}
+
+Voici l'offre d'emploi :
+"""
+${offerText}
+"""
+
+Évalue le fit ("fit"). ${fitInstructions(language)}
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, respectant exactement ce schéma :
+${FIT_SCHEMA}`;
+}
+
+export async function assessFit(offerText: string, profile: object, language: Locale = 'fr'): Promise<JobFit> {
+	const prompt = buildFitOnlyPrompt(offerText, profile, language);
+	return runClaudeForJson(prompt, ['--disallowedTools', DISALLOWED_TOOLS]) as Promise<JobFit>;
+}
+
 interface FollowupContext {
 	company: string;
 	role: string;
@@ -348,4 +389,91 @@ export async function extractProfileFromFile(filePath: string, language: Locale 
 export async function extractProfileFromText(cvText: string, language: Locale = 'fr'): Promise<object> {
 	const prompt = buildProfileExtractionPromptFromText(cvText, language);
 	return runClaudeForJson(prompt, ['--disallowedTools', DISALLOWED_TOOLS]) as Promise<object>;
+}
+
+// For recording an application made outside the app: the candidate already
+// applied elsewhere and just wants it tracked, with whatever documents they
+// actually sent kept as a backup — never a blank form to fill in by hand.
+export interface ApplicationSource {
+	contextText: string;
+	cvText?: string;
+	cvFilePath?: string;
+	coverLetterText?: string;
+	coverLetterFilePath?: string;
+}
+
+export interface ExtractedApplicationInfo {
+	company: string;
+	role: string;
+	offer_text: string | null;
+	offer_source: string | null;
+	application_date: string | null;
+}
+
+function documentBlock(label: string, text: string | undefined, filePath: string | undefined): string {
+	if (filePath) return `${label} (read it with the Read tool at this path): ${filePath}`;
+	if (text) return `${label}:\n"""\n${text}\n"""`;
+	return '';
+}
+
+function buildApplicationExtractionPrompt(source: ApplicationSource, language: Locale): string {
+	const today = new Date().toISOString().slice(0, 10);
+	const blocks = [
+		source.contextText.trim() ? `Context pasted by the candidate (a job posting, a confirmation email, a note — anything they had on hand):\n"""\n${source.contextText.trim()}\n"""` : '',
+		documentBlock('CV actually sent for this application', source.cvText, source.cvFilePath),
+		documentBlock('Cover letter actually sent for this application', source.coverLetterText, source.coverLetterFilePath),
+	]
+		.filter(Boolean)
+		.join('\n\n');
+
+	if (language === 'en') {
+		return `You are an assistant who reconstructs the record of a job application the candidate already submitted outside this app, from whatever material they have on hand.
+
+${blocks}
+
+Today's date is ${today}.
+
+Strict instructions:
+- Extract "company" and "role" from the material above. If a cover letter is present, it's usually the most reliable source (it typically opens by naming both). If you genuinely cannot determine one of them from anything given, return an empty string "" for it — never invent a company or role.
+- "offer_text": if the context includes the actual job posting text, return it verbatim (trimmed of surrounding boilerplate like email headers/footers if it was pasted from an email). If there's no posting text — only a confirmation email, or nothing usable — return null. Never fabricate a posting.
+- "offer_source": if the material mentions where the posting was found (a job board, a recruiter, a referral), a short label (e.g. "LinkedIn", "Indeed", "Cooptation"). Otherwise null.
+- "application_date": if the material states or clearly implies when the application was actually sent (an email date, a line saying "sent on..."), that date as YYYY-MM-DD. Otherwise null — do not guess a date, the app will default to today.
+- Reply ONLY with a valid JSON object, no text before or after, no markdown fences, matching exactly this schema:
+{
+  "company": "...",
+  "role": "...",
+  "offer_text": null,
+  "offer_source": null,
+  "application_date": null
+}`;
+	}
+
+	return `Tu es un assistant qui reconstitue la fiche d'une candidature déjà envoyée par le candidat en dehors de cette application, à partir de ce qu'il a sous la main.
+
+${blocks}
+
+La date d'aujourd'hui est le ${today}.
+
+Instructions strictes :
+- Extrais "company" et "role" à partir des éléments ci-dessus. Si une lettre de motivation est fournie, c'est généralement la source la plus fiable (elle nomme presque toujours l'entreprise et le poste dès le début). Si tu ne peux vraiment pas déterminer l'un des deux à partir de ce qui est fourni, renvoie une chaîne vide "" pour ce champ — n'invente jamais une entreprise ou un poste.
+- "offer_text" : si le contexte contient le texte réel de l'offre, renvoie-le tel quel (débarrassé des en-têtes/pieds de page si c'était collé depuis un email). S'il n'y a pas de texte d'offre — seulement un email de confirmation, ou rien d'exploitable — renvoie null. N'invente jamais une offre.
+- "offer_source" : si le matériel mentionne où l'offre a été trouvée (un jobboard, un recruteur, une cooptation), un court libellé (ex. "LinkedIn", "Indeed", "Cooptation"). Sinon null.
+- "application_date" : si le matériel indique ou laisse clairement entendre la date d'envoi réelle de la candidature (une date d'email, une phrase du type "envoyée le..."), cette date au format YYYY-MM-DD. Sinon null — n'invente jamais de date, l'app utilisera la date du jour par défaut.
+- Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, respectant exactement ce schéma :
+{
+  "company": "...",
+  "role": "...",
+  "offer_text": null,
+  "offer_source": null,
+  "application_date": null
+}`;
+}
+
+export async function extractApplicationInfo(source: ApplicationSource, language: Locale = 'fr'): Promise<ExtractedApplicationInfo> {
+	const prompt = buildApplicationExtractionPrompt(source, language);
+	const needsFileAccess = !!source.cvFilePath || !!source.coverLetterFilePath;
+	return runClaudeForJson(
+		prompt,
+		needsFileAccess ? ['--allowedTools', 'Read'] : ['--disallowedTools', DISALLOWED_TOOLS]
+	) as Promise<ExtractedApplicationInfo>;
 }

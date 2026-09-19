@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.6.0] — 2026-09-19
+
+### Added
+
+- Offer discovery ("Découverte" page): scans the France Travail job-search
+  API for postings matching per-profile keywords/location, scores each
+  newly-seen one with a lightweight fit-only assessment, and surfaces the
+  ones above a configurable threshold — with the same fit card, and a
+  one-click "Generate CV & apply" straight into the wizard. Configured from
+  a new "Recherche d'offres" section on the Profile page. Requires France
+  Travail API credentials (see the README) — there's no comparable public
+  API for APEC, so it's the only source wired up for now.
+- Import an application made outside the app: drop the CV that was
+  actually sent (for backup) and optionally the cover letter, paste
+  whatever context is on hand — the posting, a confirmation email, or a
+  few words — and the company, role, source, and application date are
+  identified automatically instead of filling in a blank form.
+- Status breakdown pie chart on the dashboard, alongside the existing
+  stat cards.
+
+### Fixed
+
+- Scanning France Travail always failed with a cryptic "Unexpected end of
+  JSON input" error — the API returns an empty body when nothing matches a
+  search, which crashed the response parser instead of reading as zero
+  results.
+
 ## [1.5.0] — 2026-09-17
 
 ### Added

@@ -40,6 +40,14 @@ export default function ProfilePage() {
 	const [followupDelaySaving, setFollowupDelaySaving] = useState(false);
 	const [followupDelaySaved, setFollowupDelaySaved] = useState(false);
 	const [followupDelayError, setFollowupDelayError] = useState<string | null>(null);
+	const [searchKeywords, setSearchKeywords] = useState<string[]>([]);
+	const [searchKeywordInput, setSearchKeywordInput] = useState('');
+	const [searchLocation, setSearchLocation] = useState('');
+	const [searchThreshold, setSearchThreshold] = useState(70);
+	const [franceTravailConfigured, setFranceTravailConfigured] = useState(true);
+	const [searchSaving, setSearchSaving] = useState(false);
+	const [searchSaved, setSearchSaved] = useState(false);
+	const [searchError, setSearchError] = useState<string | null>(null);
 
 	useEffect(() => {
 		setCvPreviewOpen(false);
@@ -147,6 +155,58 @@ export default function ProfilePage() {
 		} finally {
 			setFollowupDelaySaving(false);
 		}
+	}
+
+	useEffect(() => {
+		if (!profileSlug) return;
+		fetch(`/api/profiles/${profileSlug}/search-settings`)
+			.then((res) => res.json())
+			.then((data) => {
+				setSearchKeywords(data.settings?.keywords ?? []);
+				setSearchLocation(data.settings?.location ?? '');
+				setSearchThreshold(data.settings?.min_fit_score ?? 70);
+				setFranceTravailConfigured(!!data.franceTravailConfigured);
+			})
+			.catch(() => {});
+	}, [profileSlug]);
+
+	async function saveSearchSettings(next: { keywords: string[]; location: string; threshold: number }) {
+		if (!profileSlug) return;
+		setSearchSaving(true);
+		setSearchError(null);
+		try {
+			const res = await fetch(`/api/profiles/${profileSlug}/search-settings`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ keywords: next.keywords, location: next.location, minFitScore: next.threshold, sources: ['france_travail'] }),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? t.profile.searchSaveFailed);
+			setSearchSaved(true);
+			setTimeout(() => setSearchSaved(false), 1500);
+		} catch (err) {
+			setSearchError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setSearchSaving(false);
+		}
+	}
+
+	function addSearchKeyword() {
+		const value = searchKeywordInput.trim();
+		if (!value || searchKeywords.includes(value)) {
+			setSearchKeywordInput('');
+			return;
+		}
+		const next = [...searchKeywords, value];
+		setSearchKeywords(next);
+		setSearchKeywordInput('');
+		saveSearchSettings({ keywords: next, location: searchLocation, threshold: searchThreshold });
+	}
+
+	function removeSearchKeyword(keyword: string) {
+		const next = searchKeywords.filter((k) => k !== keyword);
+		setSearchKeywords(next);
+		saveSearchSettings({ keywords: next, location: searchLocation, threshold: searchThreshold });
 	}
 
 	useEffect(() => {
@@ -401,6 +461,88 @@ export default function ProfilePage() {
 									{t.profile.followupDelaySaved}
 								</span>
 							)}
+						</div>
+					</div>
+				</div>
+
+				<div className='form-section'>
+					<div className='form-section-head'>
+						<h2>{t.profile.searchTitle}</h2>
+						<span className='hint'>{t.profile.searchHint}</span>
+					</div>
+					<div className='form-section-body'>
+						{searchError && <div className='error-box'>{searchError}</div>}
+						{!franceTravailConfigured && <div className='note' style={{ marginBottom: 14 }}>{t.profile.searchNotConfigured}</div>}
+
+						<div className='field'>
+							<label>{t.profile.searchKeywordsLabel}</label>
+							<div className='tag-input'>
+								{searchKeywords.map((keyword) => (
+									<span className='tag' key={keyword}>
+										{keyword}
+										<button type='button' onClick={() => removeSearchKeyword(keyword)}>
+											✕
+										</button>
+									</span>
+								))}
+								<input
+									value={searchKeywordInput}
+									onChange={(e) => setSearchKeywordInput(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter') {
+											e.preventDefault();
+											addSearchKeyword();
+										}
+									}}
+									onBlur={addSearchKeyword}
+									placeholder={t.profile.searchKeywordsPlaceholder}
+								/>
+							</div>
+						</div>
+
+						<div className='field'>
+							<label>{t.profile.searchLocationLabel}</label>
+							<input
+								value={searchLocation}
+								onChange={(e) => setSearchLocation(e.target.value)}
+								onBlur={() => saveSearchSettings({ keywords: searchKeywords, location: searchLocation, threshold: searchThreshold })}
+								placeholder={t.profile.searchLocationPlaceholder}
+							/>
+						</div>
+
+						<div className='field'>
+							<label>{t.profile.searchThresholdLabel}</label>
+							<div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+								<input
+									type='range'
+									min={0}
+									max={100}
+									value={searchThreshold}
+									onChange={(e) => setSearchThreshold(Number(e.target.value))}
+									onMouseUp={() => saveSearchSettings({ keywords: searchKeywords, location: searchLocation, threshold: searchThreshold })}
+									onTouchEnd={() => saveSearchSettings({ keywords: searchKeywords, location: searchLocation, threshold: searchThreshold })}
+									disabled={searchSaving}
+									style={{ flex: 1, accentColor: 'var(--accent)' }}
+								/>
+								<span className='font-mono' style={{ fontSize: 18, fontWeight: 600, minWidth: 52, textAlign: 'right' }}>
+									{searchThreshold} %
+								</span>
+							</div>
+							<span className='note'>{t.profile.searchThresholdHint}</span>
+							{searchSaved && (
+								<span className='note' style={{ color: 'var(--green)' }}>
+									{t.profile.searchSaved}
+								</span>
+							)}
+						</div>
+
+						<div className='field' style={{ marginBottom: 0 }}>
+							<label>{t.profile.searchSourcesLabel}</label>
+							<div className='checkbox-row'>
+								<input type='checkbox' checked readOnly />
+								<span className='src-name'>{t.profile.searchSourceFranceTravail}</span>
+								<span className='src-hint'>{t.profile.searchSourceFranceTravailHint}</span>
+							</div>
 						</div>
 					</div>
 				</div>
